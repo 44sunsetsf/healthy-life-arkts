@@ -78,4 +78,3 @@ export const columnChatMsgList: Array<ColumnInfo> = [
   new ColumnInfo('content', 'text', -1, false, false, false),
   new ColumnInfo('timestamp', 'integer', -1, false, false, false)
 ];
-

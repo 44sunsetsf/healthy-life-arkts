@@ -18,8 +18,8 @@ import { isReachNewAchievement, ACHIEVEMENT_LEVEL_KEY } from '../model/AchieveMo
 import { TaskMapById, ITaskItem, ACHIEVEMENT_LEVEL_LIST } from '../model/TaskInitList';
 import TaskInfo from './TaskInfo';
 import DayInfo from './DayInfo';
-import { dateToStr, weekDateFormat } from '../common/utils/Utils';
-import { WeekDateModel, initializeOnStartUp, getPreviousWeek, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
+import { dateToStr, weekDateFormat, padTo2Digits } from '../common/utils/Utils';
+import { WeekDateModel, initializeOnStartUp, getPreviousWeek, getMonthCalendar, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
 import DatabaseApi from '../model/DatabaseModel';
 import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
 import DayInfoApi from '../common/database/tables/DayInfoApi';
@@ -46,6 +46,10 @@ export class HomeStore {
   public showDate: number;
   public dateTitle: string;
   public selectedDayInfo: WeekDateModel = new WeekDateModel('', '', new Date()); // task info on selected day
+  public showMonthView: boolean = false; // month calendar overlay visibility
+  public monthDateArr: Array<WeekDateModel> = []; // month calendar data source
+  public monthTitle: string = ''; // title of current month calendar
+  public monthBaseDate: Date = new Date(); // first day of current month calendar
 
   constructor(currentDate: Date) {
     this.currentDate = currentDate;
@@ -99,6 +103,78 @@ export class HomeStore {
     })
   }
 
+  private getMonthStartDate(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  private getEarliestMonthStartDate(): Date {
+    let currentDate = new Date();
+    return new Date(currentDate.getFullYear(), currentDate.getMonth() - 6, 1);
+  }
+
+  private getLatestMonthStartDate(): Date {
+    let currentDate = new Date();
+    return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  }
+
+  private getValidMonthStartDate(date: Date): Date {
+    let monthStartDate = this.getMonthStartDate(date);
+    let earliestMonthStartDate = this.getEarliestMonthStartDate();
+    let latestMonthStartDate = this.getLatestMonthStartDate();
+    if (monthStartDate.getTime() < earliestMonthStartDate.getTime()) {
+      return earliestMonthStartDate;
+    }
+    if (monthStartDate.getTime() > latestMonthStartDate.getTime()) {
+      return latestMonthStartDate;
+    }
+    return monthStartDate;
+  }
+
+  private updateMonthData(baseDate: Date, callback: Function) {
+    this.monthBaseDate = this.getValidMonthStartDate(baseDate);
+    this.monthTitle = `${this.monthBaseDate.getFullYear()}年${padTo2Digits(this.monthBaseDate.getMonth() + 1)}月`;
+    let monthInfo: WeekCalendarInfo = getMonthCalendar(new Date(this.monthBaseDate));
+    DayInfoApi.queryList(monthInfo.strArr, (res: DayInfo[]) => {
+      for (let i = 0; i < monthInfo.arr.length; i++) {
+        if (monthInfo.arr[i].dateStr !== '') {
+          let dayInfo = res.find((item: DayInfo) => item.date === monthInfo.arr[i].dateStr);
+          monthInfo.arr[i].dayInfo = dayInfo || new DayInfo(monthInfo.arr[i].dateStr, 0, 0);
+        }
+      }
+      this.monthDateArr = monthInfo.arr;
+      callback();
+    })
+  }
+
+  public openMonthView() {
+    this.updateMonthData(new Date(this.showDate), () => {
+      this.showMonthView = true;
+    })
+  }
+
+  public closeMonthView() {
+    this.showMonthView = false;
+  }
+
+  public canGoPreviousMonth(): boolean {
+    return this.monthBaseDate.getTime() > this.getEarliestMonthStartDate().getTime();
+  }
+
+  public canGoNextMonth(): boolean {
+    return this.monthBaseDate.getTime() < this.getLatestMonthStartDate().getTime();
+  }
+
+  public changeMonth(offset: number) {
+    if (offset < 0 && !this.canGoPreviousMonth()) {
+      return;
+    }
+    if (offset > 0 && !this.canGoNextMonth()) {
+      return;
+    }
+    let nextMonthDate = new Date(this.monthBaseDate.getFullYear(), this.monthBaseDate.getMonth() + offset, 1);
+    this.updateMonthData(nextMonthDate, () => {});
+  }
+
   // check is current day
   public checkCurrentDay(): boolean {
     return dateToStr(new Date()) === this.selectedDayInfo?.dateStr;
@@ -150,13 +226,6 @@ export class HomeStore {
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
-            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
-              if (!res) {
-                TaskInfoTableApi.insertData(task, (insertRes: number) => {
-                  Logger.info('updateTaskInfoList', `Insert task ${taskID} for ${task.date}, result: ${insertRes}`);
-                });
-              }
-            });
             let count: number = 0;
             taskList.forEach((taskItem: TaskInfo) => {
               if (taskItem.isDone) {
@@ -171,9 +240,6 @@ export class HomeStore {
             let taskIndex = taskList.findIndex((taskItem) => taskItem.taskID === taskID);
             Logger.info('taskList[taskIndex]', JSON.stringify(taskList[taskIndex]));
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
-            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
-              Logger.info('updateTaskInfoList', `Disable task ${taskID} for ${task.date}, result: ${res}`);
-            });
           }
           dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
           if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
