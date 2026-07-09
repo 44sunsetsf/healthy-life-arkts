@@ -1,4 +1,7 @@
+import common from '@ohos.app.ability.common';
 import { CommonConstants as Const } from '../../common/constants/CommonConstants';
+import HealthInfoApi from '../../common/database/tables/HealthInfoApi';
+import FormUtils from '../../common/utils/FormUtils';
 import { HealthCalendarDay, HealthDashboardData } from '../model/HealthDashboardModel';
 import { HealthMockService } from '../service/HealthMockService';
 
@@ -24,6 +27,7 @@ export struct HealthPage {
     this.dailyDataList = this.healthService.createDashboardDataList(this.calendarDays);
     this.selectedDayIndex = this.findTodayIndex();
     this.healthData = this.getDataByIndex(this.selectedDayIndex);
+    this.persistSelectedDataIfAbsent();
   }
 
   syncWatchData() {
@@ -98,6 +102,29 @@ export struct HealthPage {
       }
     }
     this.dailyDataList = nextList;
+    this.persistSelectedData();
+  }
+
+  persistSelectedData() {
+    if (this.healthData.dateKey.length <= 0) {
+      return;
+    }
+    HealthInfoApi.saveData(this.healthService.createCardRecord(this.healthData), () => {
+      FormUtils.updateCards(getContext(this) as common.Context);
+    });
+  }
+
+  persistSelectedDataIfAbsent() {
+    if (this.healthData.dateKey.length <= 0) {
+      return;
+    }
+    HealthInfoApi.query(this.healthData.dateKey, (record) => {
+      if (record.date.length <= 0) {
+        HealthInfoApi.saveData(this.healthService.createCardRecord(this.healthData), () => {
+          FormUtils.updateCards(getContext(this) as common.Context);
+        });
+      }
+    });
   }
 
   getDataByIndex(dayIndex: number): HealthDashboardData {

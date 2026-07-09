@@ -51,6 +51,13 @@ export const columnFormInfoList: Array<ColumnInfo> = [
   new ColumnInfo('formDimension', 'integer', -1, false, false, false)
 ];
 
+export const columnHealthInfoList: Array<ColumnInfo> = [
+  new ColumnInfo('date', 'text', -1, false, true, false),
+  new ColumnInfo('steps', 'integer', -1, true, false, false),
+  new ColumnInfo('waterMl', 'integer', -1, true, false, false),
+  new ColumnInfo('remainingCalories', 'integer', -1, true, false, false)
+];
+
 export const columnUserInfoList: Array<ColumnInfo> = [
   new ColumnInfo('id', 'integer', -1, true, true, false),
   new ColumnInfo('avatar', 'text', -1, false, false, false),

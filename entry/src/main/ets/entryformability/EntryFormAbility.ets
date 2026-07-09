@@ -17,6 +17,7 @@ import FormExtensionAbility from '@ohos.app.form.FormExtensionAbility';
 import formBindingData from '@ohos.app.form.formBindingData';
 import FormInfo from '../viewmodel/FormInfo';
 import FormUtils from '../common/utils/FormUtils';
+import ProgressCardInfo from '../viewmodel/ProgressCardInfo';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import Want from '@ohos.app.ability.Want';
 
@@ -35,7 +36,8 @@ export default class EntryFormAbility extends FormExtensionAbility {
       FormUtils.insertFormData(this.context, formInfo);
     }
     // Called to return a FormBindingData object.
-    let formData = formBindingData.createFormBindingData('');
+    let cardInfo: ProgressCardInfo = new ProgressCardInfo();
+    let formData = formBindingData.createFormBindingData(cardInfo);
     return formData;
   }
 

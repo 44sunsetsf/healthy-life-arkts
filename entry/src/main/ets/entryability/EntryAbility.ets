@@ -21,7 +21,8 @@ import {
   columnTaskInfoInfoList,
   columnFormInfoList,
   columnUserInfoList,
-  columnChatMsgList
+  columnChatMsgList,
+  columnHealthInfoList
 } from '../model/RdbColumnModel';
 import RdbUtils from '../common/database/rdb/RdbUtils';
 import Logger from '../common/utils/Logger';
@@ -66,6 +67,10 @@ export default class EntryAbility extends UIAbility {
     RdbUtils.createTable(Const.FORM_INFO.tableName ? Const.FORM_INFO.tableName : '', columnFormInfoList)
       .catch((err: Error) => {
         Logger.error(`RdbHelper formInfo err : ${JSON.stringify(err)}`);
+      });
+    RdbUtils.createTable(Const.HEALTH_INFO.tableName ? Const.HEALTH_INFO.tableName : '', columnHealthInfoList)
+      .catch((err: Error) => {
+        Logger.error(`RdbHelper healthInfo err : ${JSON.stringify(err)}`);
       });
     await RdbUtils.createTable(Const.USER_INFO.tableName ? Const.USER_INFO.tableName : '', columnUserInfoList)
       .then(() => {

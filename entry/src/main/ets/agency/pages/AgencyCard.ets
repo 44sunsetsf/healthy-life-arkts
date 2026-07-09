@@ -150,7 +150,8 @@ struct AgencyCard {
             }
             .margin({ right: $r("app.float.agency_item_margin") })
             .borderRadius($r("app.float.agency_item_radius"))
-            .backgroundColor(Color.White)
+            .backgroundColor(taskItem.isDone ? '#E8F8F5' : '#FFFFFF')
+            .border({ width: taskItem.isDone ? 1 : 0, color: '#B7EBD9' })
           }, (taskItem: AgencyCardInfo) => JSON.stringify(taskItem))
         }
         .padding({
@@ -197,14 +198,22 @@ struct AgencyCard {
         .width($r('app.float.agency_image_size'))
         .height($r('app.float.agency_image_size'))
         .objectFit(ImageFit.Contain)
+        .opacity(taskItem.isDone ? 0.72 : 1)
       if (taskItem.dateType) {
-        Text(taskItem.isDone ? taskItem.targetValue : this.TARGET_VALUE_SPLICING + taskItem.targetValue)
-          .fontSize($r("app.float.text_common_size"))
-          .fontColor($r("app.color.text_common_color"))
-          .opacity(this.TARGET_TEXT_OPACITY)
-          .fontWeight(FontWeight.Normal)
-          .layoutWeight(this.TARGET_TEXT_WEIGHT)
-          .textAlign(TextAlign.End)
+        Row({ space: 6 }) {
+          Text(taskItem.isDone ? '已完成' : this.TARGET_VALUE_SPLICING + taskItem.targetValue)
+            .fontSize($r("app.float.text_common_size"))
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#182431')
+            .opacity(taskItem.isDone ? 1 : this.TARGET_TEXT_OPACITY)
+            .fontWeight(taskItem.isDone ? this.TEXT_SLIGHTLY_BOLD : FontWeight.Normal)
+            .layoutWeight(this.TARGET_TEXT_WEIGHT)
+            .textAlign(TextAlign.End)
+          if (taskItem.isDone) {
+            this.DoneMark()
+          }
+        }
+        .layoutWeight(this.TARGET_TEXT_WEIGHT)
+        .alignItems(VerticalAlign.Center)
       } else {
         Row() {
           Text(taskItem.finValueIsNull ? this.CROSS_BAR_SYMBOL : taskItem.finValue)
@@ -213,19 +222,23 @@ struct AgencyCard {
               $r('app.float.agency_text_bold'))
             .fontWeight(taskItem.finValueIsNull ? FontWeight.Normal : this.TEXT_SLIGHTLY_BOLD)
             .fontColor(taskItem.finValueIsNull ?
-              $r('app.color.hex_common_color') :
-              $r('app.color.text_common_color'))
+              '#99182431' :
+              (taskItem.isDone ? '#30C6B0' : '#182431'))
           Text(this.SLASHES + taskItem.targetValue)
             .fontSize($r("app.float.text_common_size"))
             .fontWeight(FontWeight.Normal)
-            .fontColor($r('app.color.hex_common_color'))
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#99182431')
           Text(taskItem.unit)
             .fontSize($r("app.float.text_common_size"))
             .fontWeight(FontWeight.Normal)
-            .fontColor($r('app.color.hex_common_color'))
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#99182431')
+          if (taskItem.isDone) {
+            this.DoneMark()
+          }
         }
         .layoutWeight(this.TARGET_TEXT_WEIGHT)
         .justifyContent(FlexAlign.End)
+        .alignItems(VerticalAlign.Center)
       }
     }
     .padding({
@@ -237,6 +250,18 @@ struct AgencyCard {
     .onClick(() => {
       this.jumpToAbility();
     })
+  }
+
+  @Builder DoneMark() {
+    Text('✓')
+      .fontSize(12)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#FFFFFF')
+      .width(20)
+      .height(20)
+      .textAlign(TextAlign.Center)
+      .backgroundColor('#30C6B0')
+      .borderRadius(10)
   }
 
   jumpToAbility() {

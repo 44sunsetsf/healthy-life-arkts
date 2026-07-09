@@ -53,6 +53,12 @@ export class CommonConstants {
     columns: ['id', 'formId', 'formName', 'formDimension']
   } as CommonConstantsInfo
 
+  /** health card table */
+  static readonly HEALTH_INFO = {
+    tableName: 'healthInfo',
+    columns: ['date', 'steps', 'waterMl', 'remainingCalories']
+  } as CommonConstantsInfo
+
   /** user info table */
   static readonly USER_INFO = {
     tableName: 'userInfo',
