@@ -53,6 +53,7 @@ export const columnFormInfoList: Array<ColumnInfo> = [
 
 export const columnUserInfoList: Array<ColumnInfo> = [
   new ColumnInfo('id', 'integer', -1, true, true, false),
+  new ColumnInfo('username', 'text', -1, false, false, false),
   new ColumnInfo('avatar', 'text', -1, false, false, false),
   new ColumnInfo('nickname', 'text', -1, false, false, false),
   new ColumnInfo('signature', 'text', -1, false, false, false),
@@ -62,3 +63,18 @@ export const columnUserInfoList: Array<ColumnInfo> = [
   new ColumnInfo('weight', 'text', -1, false, false, false)
 ];
 
+export const columnFriendInfoList: Array<ColumnInfo> = [
+  new ColumnInfo('id', 'integer', -1, true, true, true),
+  new ColumnInfo('username', 'text', -1, false, false, false),
+  new ColumnInfo('nickname', 'text', -1, false, false, false),
+  new ColumnInfo('password', 'text', -1, false, false, false),
+  new ColumnInfo('experience', 'integer', -1, true, false, false),
+  new ColumnInfo('isMe', 'integer', -1, true, false, false)
+];
+
+export const columnChatMsgList: Array<ColumnInfo> = [
+  new ColumnInfo('id', 'integer', -1, false, true, true),
+  new ColumnInfo('role', 'text', -1, false, false, false),
+  new ColumnInfo('content', 'text', -1, false, false, false),
+  new ColumnInfo('timestamp', 'integer', -1, false, false, false)
+];

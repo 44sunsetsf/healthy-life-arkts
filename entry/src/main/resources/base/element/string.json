@@ -25,6 +25,10 @@
       "value": "首页"
     },
     {
+      "name": "tab_health",
+      "value": "健康"
+    },
+    {
       "name": "mine_personal_data",
       "value": "个人资料"
     },
@@ -50,7 +54,7 @@
     },
     {
       "name": "tab_rank",
-      "value": "排名"
+      "value": "排行榜"
     },
     {
       "name": "achievement",
@@ -91,6 +95,10 @@
     {
       "name": "task_night",
       "value": "早睡"
+    },
+    {
+      "name": "task_run",
+      "value": "跑步一公里"
     },
     {
       "name": "task_done",
@@ -199,6 +207,14 @@
     {
       "name": "empty",
       "value": "empty"
+    },
+    {
+      "name": "tab_ai",
+      "value": "AI助手"
+    },
+    {
+      "name": "internet_reason",
+      "value": "Used for AI assistant network requests"
     }
   ]
 }

@@ -26,44 +26,49 @@ export struct AiChatPage {
   @State messages: ChatMessage[] = [];
   @State inputText: string = '';
   @State isLoading: boolean = false;
-  @State inputRefreshKey: number = 0;
   @State showHistory: boolean = false;
   @State conversations: Conversation[] = [];
   private scroller: Scroller = new Scroller();
+  private firstLoad: boolean = true;
 
   aboutToAppear() {
-    this.newConversation();
+    if (this.firstLoad) {
+      this.firstLoad = false;
+      this.showWelcome();
+    }
   }
 
-  newConversation(): void {
-    Logger.info(TAG, 'newConversation');
+  showWelcome(): void {
     const welcome = new ChatMessage(MessageRole.ASSISTANT,
       '你好！我是你的健康生活AI助手。你可以问我关于健康习惯、饮食、运动等方面的问题，我也可以根据你的打卡数据给你个性化的建议。请问有什么可以帮你的？');
     this.messages = [welcome];
+  }
+
+  newConversation(): void {
+    this.saveMessage(new ChatMessage(MessageRole.SYSTEM, ''));
+    this.showWelcome();
     this.inputText = '';
-    this.inputRefreshKey++;
+    this.showHistory = false;
     this.scrollToBottom();
-    this.saveMessage(welcome);
   }
 
   loadHistory(): void {
-    Logger.info(TAG, 'loadHistory: querying DB');
     ChatMsgApi.queryAll((rows: ChatMsgRow[]) => {
       if (!rows || rows.length === 0) {
-        Logger.info(TAG, 'loadHistory: no history');
         this.conversations = [];
         return;
       }
       const groups: Conversation[] = [];
-      let currentStart = rows[0].timestamp;
-      let currentEnd = rows[0].timestamp;
+      let currentStart = 0;
+      let currentEnd = 0;
       let firstUserMsg = '';
       let count = 0;
+      let started = false;
 
       for (let i = 0; i < rows.length; i++) {
-        const ts = rows[i].timestamp;
-        if (ts - currentEnd > 30 * 60 * 1000) {
-          if (count > 0 && firstUserMsg) {
+        const row = rows[i];
+        if (row.role === 'system') {
+          if (started && count > 0 && firstUserMsg) {
             groups.push({
               title: firstUserMsg,
               date: new Date(currentStart).toLocaleString(),
@@ -72,17 +77,22 @@ export struct AiChatPage {
               timeEnd: currentEnd
             });
           }
-          currentStart = ts;
+          started = false;
           firstUserMsg = '';
           count = 0;
+          continue;
         }
-        currentEnd = ts;
+        if (!started) {
+          currentStart = row.timestamp;
+          started = true;
+        }
+        currentEnd = row.timestamp;
         count++;
-        if (!firstUserMsg && rows[i].role === 'user') {
-          firstUserMsg = rows[i].content;
+        if (!firstUserMsg && row.role === 'user') {
+          firstUserMsg = row.content;
         }
       }
-      if (count > 0 && firstUserMsg) {
+      if (started && count > 0 && firstUserMsg) {
         groups.push({
           title: firstUserMsg,
           date: new Date(currentStart).toLocaleString(),
@@ -92,21 +102,20 @@ export struct AiChatPage {
         });
       }
       this.conversations = groups.reverse();
-      Logger.info(TAG, `loadHistory: ${this.conversations.length} conversations`);
     });
   }
 
   restoreConversation(conv: Conversation): void {
-    Logger.info(TAG, `restoreConversation: ${conv.timeStart} - ${conv.timeEnd}`);
     ChatMsgApi.queryAll((rows: ChatMsgRow[]) => {
       const msgs: ChatMessage[] = [];
       for (const row of rows) {
+        if (row.role === 'system') {
+          continue;
+        }
         if (row.timestamp >= conv.timeStart && row.timestamp <= conv.timeEnd) {
           let msgRole: MessageRole = MessageRole.ASSISTANT;
           if (row.role === 'user') {
             msgRole = MessageRole.USER;
-          } else if (row.role === 'system') {
-            msgRole = MessageRole.SYSTEM;
           }
           const msg = new ChatMessage(msgRole, row.content);
           msg.timestamp = row.timestamp;
@@ -116,7 +125,6 @@ export struct AiChatPage {
       this.messages = msgs;
       this.showHistory = false;
       this.scrollToBottom();
-      Logger.info(TAG, `restoreConversation: loaded ${msgs.length} messages`);
     });
   }
 
@@ -134,33 +142,27 @@ export struct AiChatPage {
           let context = `今天是${today}。\n今日打卡情况如下：\n`;
           let finishCount = 0;
           let totalCount = 0;
-
           for (let i = 0; i < taskList.length; i++) {
             const task = taskList[i];
             const taskId = task.taskID - 1;
             const name = TASK_NAMES[taskId];
             const unit = TASK_UNITS[taskId];
-
             if (task.isDone) {
               finishCount++;
               context += `- ${name}：✅ 已完成`;
             } else {
               context += `- ${name}：❌ 未完成`;
             }
-
             if (unit && task.targetValue) {
               context += `（${task.finValue}/${task.targetValue}${unit}）`;
             }
             context += '\n';
             totalCount++;
           }
-
           context += `\n总体进度：${finishCount}/${totalCount} 已完成。`;
           if (finishCount === totalCount && totalCount > 0) {
             context += ' 所有任务已全部完成！';
           }
-
-          Logger.info(TAG, `buildHealthContext: ${context}`);
           resolve(context);
         });
       });
@@ -172,27 +174,19 @@ export struct AiChatPage {
     if (!text || this.isLoading) {
       return;
     }
-
-    Logger.info(TAG, `sendMessage: userMsgLen=${text.length}, historyLen=${this.messages.length}`);
-
     const userMsg = new ChatMessage(MessageRole.USER, text);
     this.messages = this.messages.concat([userMsg]);
     this.saveMessage(userMsg);
     this.inputText = '';
-    this.inputRefreshKey++;
     this.scrollToBottom();
     this.isLoading = true;
-
     const healthContext = await this.buildHealthContext();
-
     try {
       const reply = await aiService.sendMessage(text, this.messages.slice(0, -1), healthContext);
-      Logger.info(TAG, `sendMessage: received reply len=${reply.length}`);
       const aiMsg = new ChatMessage(MessageRole.ASSISTANT, reply);
       this.messages = this.messages.concat([aiMsg]);
       this.saveMessage(aiMsg);
     } catch (err) {
-      Logger.error(TAG, `sendMessage error: ${JSON.stringify(err)}`);
       const errMsg = new ChatMessage(MessageRole.ASSISTANT, '抱歉，网络请求失败了，请检查网络连接和API配置后重试。');
       this.messages = this.messages.concat([errMsg]);
     } finally {
@@ -212,238 +206,285 @@ export struct AiChatPage {
     Column() {
       Row() {
         Text('历史记录')
-          .fontSize($r('app.float.default_18'))
-          .fontColor($r('app.color.white'))
-          .fontWeight(Const.FONT_WEIGHT_700)
+          .fontSize('18fp')
+          .fontColor('#FFFFFF')
+          .fontWeight(FontWeight.Bold)
         Blank()
-        Text('➕')
-          .fontSize('16fp')
-          .padding($r('app.float.default_8'))
-          .onClick(() => {
-            this.newConversation();
-          })
+        Text('＋')
+          .fontSize('22fp')
+          .fontColor('#FFFFFF')
+          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+          .onClick(() => this.newConversation())
         Text('✕')
-          .fontSize($r('app.float.default_20'))
-          .fontColor($r('app.color.white'))
-          .padding($r('app.float.default_8'))
-          .onClick(() => {
-            this.showHistory = false;
-          })
+          .fontSize('16fp')
+          .fontColor('#FFFFFF')
+          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+          .onClick(() => { this.showHistory = false; })
       }
-      .width(Const.THOUSANDTH_1000)
-      .height(Const.DEFAULT_56)
-      .backgroundColor($r('app.color.blueColor'))
-      .padding({ left: Const.THOUSANDTH_33, right: Const.THOUSANDTH_33 })
+      .width('100%')
+      .height(56)
+      .backgroundColor('#6C5CE7')
+      .padding({ left: 20, right: 20 })
 
       if (this.conversations.length === 0) {
         Column() {
+          Text('📭')
+            .fontSize('48fp')
+            .margin({ top: 120 })
           Text('暂无历史记录')
-            .fontSize($r('app.float.default_14'))
-            .fontColor($r('app.color.statusTipColor'))
-            .margin({ top: $r('app.float.default_100') })
+            .fontSize('14fp')
+            .fontColor('#999')
+            .margin({ top: 12 })
         }
-        .width(Const.THOUSANDTH_1000)
+        .width('100%')
         .layoutWeight(1)
-        .backgroundColor($r('app.color.primaryBgColor'))
+        .backgroundColor('#F5F0FF')
       } else {
         Scroll() {
           Column() {
             ForEach(this.conversations, (conv: Conversation, index: number) => {
               Row() {
                 Column() {
-                  Text(conv.title.length > 30 ? conv.title.substring(0, 30) + '...' : conv.title)
-                    .fontSize($r('app.float.default_14'))
-                    .fontColor($r('app.color.titleColor'))
-                    .fontWeight(Const.FONT_WEIGHT_500)
+                  Text('💬')
+                    .fontSize('28fp')
+                }
+                .width(44)
+                .height(44)
+                .borderRadius(22)
+                .backgroundColor('#F0EBFF')
+                .justifyContent(FlexAlign.Center)
+                .margin({ right: 12 })
+
+                Column() {
+                  Text(conv.title.length > 25 ? conv.title.substring(0, 25) + '...' : conv.title)
+                    .fontSize('14fp')
+                    .fontColor('#2D3436')
+                    .fontWeight(FontWeight.Medium)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  Text(`${conv.date}  ·  ${conv.msgCount}条消息`)
-                    .fontSize($r('app.float.default_12'))
-                    .fontColor($r('app.color.statusTipColor'))
-                    .margin({ top: $r('app.float.default_4') })
+                  Text(`${conv.date}  ·  ${conv.msgCount} 条消息`)
+                    .fontSize('11fp')
+                    .fontColor('#B2BEC3')
+                    .margin({ top: 4 })
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
-
-                Text('→')
-                  .fontSize($r('app.float.default_16'))
-                  .fontColor($r('app.color.blueColor'))
               }
-              .width(Const.THOUSANDTH_1000)
-              .padding({
-                left: Const.THOUSANDTH_33,
-                right: Const.THOUSANDTH_33,
-                top: $r('app.float.default_14'),
-                bottom: $r('app.float.default_14')
-              })
-              .backgroundColor($r('app.color.white'))
-              .border({ width: { bottom: '0.5vp' }, color: '#E0E0E0' })
-              .onClick(() => {
-                this.restoreConversation(conv);
-              })
-            }, (conv: Conversation, index: number) => conv.timeStart.toString())
+              .width('100%')
+              .padding({ left: 20, right: 20, top: 14, bottom: 14 })
+              .backgroundColor('#FFFFFF')
+              .border({ width: { bottom: '0.5vp' }, color: '#F0EBFF' })
+              .onClick(() => this.restoreConversation(conv))
+            }, (conv: Conversation) => conv.timeStart.toString())
           }
-          .width(Const.THOUSANDTH_1000)
+          .width('100%')
         }
         .scrollBar(BarState.Off)
         .layoutWeight(1)
-        .backgroundColor($r('app.color.primaryBgColor'))
+        .backgroundColor('#F5F0FF')
       }
     }
-    .width(Const.THOUSANDTH_1000)
-    .height(Const.THOUSANDTH_1000)
-    .backgroundColor($r('app.color.primaryBgColor'))
+    .width('100%')
+    .height('100%')
   }
 
   @Builder
-  buildMessageBubble(msg: ChatMessage) {
+  buildUserBubble(msg: ChatMessage) {
     Row() {
-      if (msg.role === MessageRole.USER) {
-        Blank()
-        Column() {
-          Text(msg.content)
-            .fontSize($r('app.float.default_14'))
-            .fontColor($r('app.color.white'))
-            .padding($r('app.float.default_12'))
-            .borderRadius({
-              topLeft: $r('app.float.default_12'),
-              topRight: $r('app.float.default_12'),
-              bottomLeft: $r('app.float.default_12')
-            })
-            .backgroundColor($r('app.color.blueColor'))
-            .constraintSize({ maxWidth: Const.THOUSANDTH_800 })
-        }
-      } else {
-        Column() {
-          Text(msg.content)
-            .fontSize($r('app.float.default_14'))
-            .fontColor($r('app.color.titleColor'))
-            .padding($r('app.float.default_12'))
-            .borderRadius({
-              topLeft: $r('app.float.default_12'),
-              topRight: $r('app.float.default_12'),
-              bottomRight: $r('app.float.default_12')
-            })
-            .backgroundColor($r('app.color.btnBgColor'))
-            .constraintSize({ maxWidth: Const.THOUSANDTH_800 })
-        }
-        Blank()
+      Blank()
+      Column() {
+        Text(msg.content)
+          .fontSize('15fp')
+          .fontColor('#FFFFFF')
+          .lineHeight('22fp')
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .borderRadius({
+            topLeft: 20,
+            topRight: 20,
+            bottomLeft: 20,
+            bottomRight: 4
+          })
+          .backgroundColor('#6C5CE7')
+          .constraintSize({ maxWidth: '78%' })
       }
+      .shadow({ radius: 8, color: '#406C5CE7', offsetX: 0, offsetY: 3 })
     }
-    .width(Const.THOUSANDTH_1000)
-    .padding({
-      left: Const.THOUSANDTH_33,
-      right: Const.THOUSANDTH_33,
-      top: $r('app.float.default_8'),
-      bottom: $r('app.float.default_8')
-    })
+    .width('100%')
+    .padding({ left: 16, right: 12, top: 6, bottom: 6 })
+  }
+
+  @Builder
+  buildAiBubble(msg: ChatMessage) {
+    Row() {
+      Column() {
+        Text('🤖')
+          .fontSize('16fp')
+      }
+      .width(36)
+      .height(36)
+      .borderRadius(18)
+      .backgroundColor('#EDE7FF')
+      .justifyContent(FlexAlign.Center)
+      .margin({ right: 8, top: 4 })
+
+      Column() {
+        Text(msg.content)
+          .fontSize('15fp')
+          .fontColor('#2D3436')
+          .lineHeight('22fp')
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .borderRadius({
+            topLeft: 4,
+            topRight: 20,
+            bottomLeft: 20,
+            bottomRight: 20
+          })
+          .backgroundColor('#FFFFFF')
+          .constraintSize({ maxWidth: '72%' })
+      }
+      .shadow({ radius: 6, color: '#18000000', offsetX: 0, offsetY: 2 })
+
+      Blank()
+    }
+    .width('100%')
+    .padding({ left: 12, right: 16, top: 6, bottom: 6 })
+  }
+
+  @Builder
+  buildLoading() {
+    Row() {
+      Column() {
+        Text('🤖')
+          .fontSize('16fp')
+      }
+      .width(36)
+      .height(36)
+      .borderRadius(18)
+      .backgroundColor('#EDE7FF')
+      .justifyContent(FlexAlign.Center)
+      .margin({ right: 8 })
+
+      Row({ space: 4 }) {
+        Text('•').fontSize('20fp').fontColor('#A29BFE')
+        Text('•').fontSize('20fp').fontColor('#6C5CE7')
+        Text('•').fontSize('20fp').fontColor('#A29BFE')
+      }
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .borderRadius({ topLeft: 4, topRight: 20, bottomLeft: 20, bottomRight: 20 })
+      .backgroundColor('#FFFFFF')
+
+      Blank()
+    }
+    .width('100%')
+    .padding({ left: 12, right: 16, top: 6, bottom: 6 })
   }
 
   build() {
     if (this.showHistory) {
-      Column() {
-        this.buildHistoryPanel()
-      }
-      .width(Const.THOUSANDTH_1000)
-      .height(Const.THOUSANDTH_1000)
+      this.buildHistoryPanel()
     } else {
       Column() {
+        // Header
         Row() {
-          Text('AI 助手')
-            .fontSize($r('app.float.default_22'))
-            .fontColor($r('app.color.white'))
-            .fontWeight(Const.FONT_WEIGHT_700)
+          Column() {
+            Text('✨ AI 智能助手')
+              .fontSize('18fp')
+              .fontColor('#FFFFFF')
+              .fontWeight(FontWeight.Bold)
+            Text('你的专属健康管家')
+              .fontSize('10fp')
+              .fontColor('#DFE6E9')
+              .margin({ top: 2 })
+          }
           Blank()
-          Text('➕')
-            .fontSize('18fp')
-            .padding($r('app.float.default_8'))
-            .onClick(() => {
-              this.newConversation();
-            })
-          Text('📋')
-            .fontSize('20fp')
-            .padding($r('app.float.default_8'))
-            .onClick(() => {
-              this.loadHistory();
-              this.showHistory = true;
-            })
+          Row({ space: 4 }) {
+            Text('＋')
+              .fontSize('18fp')
+              .fontColor('#FFFFFF')
+              .width(34)
+              .height(34)
+              .borderRadius(17)
+              .backgroundColor('#FFFFFF20')
+              .textAlign(TextAlign.Center)
+              .onClick(() => this.newConversation())
+            Text('📋')
+              .fontSize('16fp')
+              .width(34)
+              .height(34)
+              .borderRadius(17)
+              .backgroundColor('#FFFFFF20')
+              .textAlign(TextAlign.Center)
+              .onClick(() => {
+                this.loadHistory();
+                this.showHistory = true;
+              })
+          }
         }
-        .width(Const.THOUSANDTH_1000)
-        .height(Const.DEFAULT_56)
-        .backgroundColor($r('app.color.blueColor'))
-        .padding({ left: Const.THOUSANDTH_33, right: Const.THOUSANDTH_33 })
+        .width('100%')
+        .height(64)
+        .backgroundColor('#6C5CE7')
+        .padding({ left: 20, right: 16 })
 
+        // Messages
         Scroll(this.scroller) {
           Column() {
             ForEach(this.messages, (msg: ChatMessage, index: number) => {
-              this.buildMessageBubble(msg)
+              if (msg.role === MessageRole.USER) {
+                this.buildUserBubble(msg)
+              } else {
+                this.buildAiBubble(msg)
+              }
             }, (msg: ChatMessage, index: number) => index.toString())
+
+            if (this.isLoading) {
+              this.buildLoading()
+            }
+
+            Column().height(8)
           }
-          .width(Const.THOUSANDTH_1000)
-          .padding({ top: $r('app.float.default_8'), bottom: $r('app.float.default_8') })
+          .width('100%')
+          .padding({ top: 8 })
         }
         .scrollBar(BarState.Off)
         .layoutWeight(1)
-        .backgroundColor($r('app.color.primaryBgColor'))
+        .backgroundColor('#F5F0FF')
 
-        if (this.isLoading) {
-          Row() {
-            LoadingProgress()
-              .width($r('app.float.default_24'))
-              .height($r('app.float.default_24'))
-              .color($r('app.color.blueColor'))
-            Text('AI正在思考...')
-              .fontSize($r('app.float.default_12'))
-              .fontColor($r('app.color.statusTipColor'))
-              .margin({ left: $r('app.float.default_8') })
-          }
-          .width(Const.THOUSANDTH_1000)
-          .height($r('app.float.default_36'))
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.white'))
-        }
-
+        // Input bar
         Row() {
           TextInput({ placeholder: '输入你的问题...' })
-            .key(`input_${this.inputRefreshKey}`)
-            .fontSize($r('app.float.default_14'))
-            .fontColor($r('app.color.titleColor'))
+            .fontSize('14fp')
             .layoutWeight(1)
-            .height($r('app.float.default_40'))
-            .backgroundColor($r('app.color.primaryBgColor'))
-            .borderRadius($r('app.float.default_20'))
-            .padding({ left: $r('app.float.default_12'), right: $r('app.float.default_12') })
+            .height(44)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(22)
+            .padding({ left: 20, right: 8 })
             .defaultFocus(true)
             .focusable(true)
             .onChange((value: string) => {
               this.inputText = value;
             })
-            .onSubmit(() => {
-              this.sendMessage();
-            })
+            .onSubmit(() => this.sendMessage())
 
-          Button('发送')
-            .fontSize($r('app.float.default_14'))
-            .height($r('app.float.default_40'))
-            .backgroundColor($r('app.color.blueColor'))
-            .fontColor($r('app.color.white'))
-            .borderRadius($r('app.float.default_20'))
-            .margin({ left: $r('app.float.default_8') })
-            .onClick(() => {
-              this.sendMessage();
-            })
+          Button() {
+            Text('➤')
+              .fontSize('16fp')
+              .fontColor('#FFFFFF')
+          }
+          .width(42)
+          .height(42)
+          .borderRadius(21)
+          .backgroundColor('#6C5CE7')
+          .margin({ left: 6 })
+          .shadow({ radius: 6, color: '#406C5CE7', offsetX: 0, offsetY: 3 })
+          .onClick(() => this.sendMessage())
         }
-        .width(Const.THOUSANDTH_1000)
-        .padding({
-          left: Const.THOUSANDTH_33,
-          right: Const.THOUSANDTH_33,
-          top: $r('app.float.default_8'),
-          bottom: $r('app.float.default_8')
-        })
-        .backgroundColor($r('app.color.white'))
+        .width('100%')
+        .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+        .backgroundColor('#FFFFFF')
+        .border({ width: { top: '0.5vp' }, color: '#EDE7FF' })
       }
-      .width(Const.THOUSANDTH_1000)
-      .height(Const.THOUSANDTH_1000)
+      .width('100%')
+      .height('100%')
     }
   }
 }
