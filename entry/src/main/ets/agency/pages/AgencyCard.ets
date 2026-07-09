@@ -26,7 +26,8 @@ struct AgencyCard {
     apple: $r('app.media.ic_task_apple'),
     smile: $r('app.media.ic_task_smile'),
     clean: $r('app.media.ic_task_brush'),
-    sleep: $r('app.media.ic_task_night')
+    sleep: $r('app.media.ic_task_night'),
+    run: $r('app.media.ic_task_morning')
   } as iconInfo;
   /*
    * The action type.
@@ -133,6 +134,9 @@ struct AgencyCard {
         break;
       case 'sleep':
         result = $r('app.media.ic_task_night');
+        break;
+      case 'run':
+        result = $r('app.media.ic_task_morning');
         break;
       default:
         break;
@@ -265,4 +269,5 @@ interface iconInfo {
   smile: Resource;
   clean: Resource;
   sleep: Resource;
+  run: Resource;
 }
