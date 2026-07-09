@@ -36,8 +36,8 @@ import GlobalInfo from '../viewmodel/GlobalInfo';
 import { ratio2percent, padTo2Digits } from '../common/utils/Utils';
 import Logger from '../common/utils/Logger';
 
-const SUB_TEXT_COLOR: string = '#99FFFFFF';
-const CARD_BG_COLOR: string = '#1AFFFFFF';
+const SUB_TEXT_COLOR: string = '#999999';
+const CARD_BG_COLOR: string = '#FFFFFF';
 const PROGRESS_COLOR: string = '#F6CD5C';
 const MINI_BADGE_SIZE: number = 40;
 const PERCENT_BADGE_WIDTH: string = '17%';
@@ -278,7 +278,7 @@ export struct AchievementIndex {
     Column({ space: Const.SPACE_4 }) {
       Text(label)
         .fontSize($r('app.float.default_16'))
-        .fontColor(this.currentTab === index ? $r('app.color.white') : SUB_TEXT_COLOR)
+        .fontColor(this.currentTab === index ? $r('app.color.titleColor') : SUB_TEXT_COLOR)
         .fontWeight(this.currentTab === index ? Const.FONT_WEIGHT_500 : Const.FONT_WEIGHT_400)
       Row()
         .width(Const.DEFAULT_24)
@@ -327,7 +327,7 @@ export struct AchievementIndex {
           Text($r('app.string.full_attendance_level', milestone))
             .lineHeight($r('app.float.default_16'))
             .fontSize($r('app.float.default_12'))
-            .fontColor($r('app.color.white'))
+            .fontColor($r('app.color.titleColor'))
         }
         .width(ratio2percent(Const.ACHIEVE_SPLIT_RATIO))
         .padding({ top: Const.ACHIEVE_CARD_TOP, bottom: Const.ACHIEVE_CARD_BOTTOM })
@@ -341,7 +341,7 @@ export struct AchievementIndex {
           .objectFit(ImageFit.Contain)
         Text($r('app.string.trophy_full_title'))
           .fontSize($r('app.float.default_12'))
-          .fontColor($r('app.color.white'))
+          .fontColor($r('app.color.titleColor'))
           .margin({ top: Const.DEFAULT_12 })
         Text(this.trophyStageLabel(this.checkInDays))
           .fontSize($r('app.float.default_10'))
@@ -382,7 +382,7 @@ export struct AchievementIndex {
             Text(TaskMapById[stats.taskID - 1].taskName)
               .fontSize($r('app.float.default_16'))
               .fontWeight(Const.FONT_WEIGHT_500)
-              .fontColor($r('app.color.white'))
+              .fontColor($r('app.color.titleColor'))
             Blank()
             Text(this.getStreakText(stats))
               .fontSize($r('app.float.default_12'))
@@ -464,7 +464,7 @@ export struct AchievementIndex {
             Text(TaskMapById[stats.taskID - 1].taskName)
               .fontSize($r('app.float.default_16'))
               .fontWeight(Const.FONT_WEIGHT_500)
-              .fontColor($r('app.color.white'))
+              .fontColor($r('app.color.titleColor'))
             Blank()
             Text(this.getMaxPercent(stats) > 0 ? `最高达成：${this.getMaxPercent(stats)}%` : '最高达成：--')
               .fontSize($r('app.float.default_12'))
@@ -534,6 +534,6 @@ export struct AchievementIndex {
     .padding(Const.DEFAULT_10)
     .height(Const.FULL_HEIGHT)
     .width(Const.FULL_WIDTH)
-    .backgroundColor($r('app.color.black'))
+    .backgroundColor($r('app.color.primaryBgColor'))
   }
 }
