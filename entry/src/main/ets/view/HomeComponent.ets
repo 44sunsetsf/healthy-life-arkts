@@ -16,6 +16,7 @@
 import router from '@ohos.router';
 import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
+import { AiFloatBtn } from '../ai/view/AiFloatBtn';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
@@ -28,7 +29,9 @@ import { BroadCast, BroadCastType } from '../common/utils/BroadCast';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import AchievementInfo from '../viewmodel/AchievementInfo';
 import { WeekDateModel } from '../model/WeekCalendarModel';
-import { sameDate } from '../common/utils/Utils';
+import { sameDate, dateToStr } from '../common/utils/Utils';
+import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
+import Logger from '../common/utils/Logger';
 
 const WHITE_COLOR_0X = 255;
 const MONTH_DAY_WIDTH: number = 100 / Const.WEEK_DAY_NUM;
@@ -94,6 +97,59 @@ export default struct HomeIndex {
       editTask.isOpen = item.isOpen;
       router.pushUrl({ url: 'pages/TaskEditPage', params: { params: JSON.stringify(editTask) } });
     }
+  }
+
+  @Builder swipeEndBuilder(item: TaskInfo) {
+    Row() {
+      Row() {
+        Text('设置')
+          .fontSize(14)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor($r('app.color.blueColor'))
+      .onClick(() => {
+        this.taskItemAction(item, false);
+      })
+
+      Row() {
+        Text('删除')
+          .fontSize(14)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor($r('app.color.primaryRed'))
+      .onClick(() => {
+        this.deleteTask(item);
+      })
+    }
+    .height('100%')
+  }
+
+  deleteTask(item: TaskInfo) {
+    let dateStr = item.date || dateToStr(new Date());
+    let deleteInfo = new TaskInfo(item.id, dateStr, item.taskID, item.targetValue,
+      item.isAlarm, item.startTime, item.endTime, item.frequency, item.isDone,
+      item.finValue, false);
+    TaskInfoTableApi.deleteDataByID(deleteInfo, (res: number) => {
+      Logger.info('deleteTask', 'Delete result: ' + res);
+      this.homeStore.dateArr = this.homeStore.dateArr.map((weekItem) => {
+        if (weekItem.dateStr === dateStr) {
+          weekItem.taskList = weekItem.taskList.filter((taskItem: TaskInfo) => taskItem.taskID !== item.taskID);
+          if (this.homeStore.checkCurrentDay()) {
+            this.homeStore.selectedDayInfo = weekItem;
+          }
+          return weekItem;
+        }
+        return weekItem;
+      }).slice(0);
+    });
   }
 
   //confirm clockL
@@ -276,14 +332,23 @@ export default struct HomeIndex {
           HomeTopView({ homeStore: this.homeStore })
           Text($r('app.string.task_list')).titleTextStyle()
           if (this.homeStore.getTaskListOfDay().length > 0) {
-            Column({ space: Const.DEFAULT_8 }) {
+            List({ space: Const.DEFAULT_8 }) {
               ForEach(this.homeStore.getTaskListOfDay(), (item: TaskInfo) => {
-                TaskCard({
-                  taskInfoStr: JSON.stringify(item),
-                  clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
+                ListItem() {
+                  TaskCard({
+                    taskInfoStr: JSON.stringify(item),
+                    clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
+                  })
+                }
+                .height($r('app.float.default_88'))
+                .swipeAction({
+                  end: {
+                    builder: () => {
+                      this.swipeEndBuilder(item);
+                    },
+                    actionAreaDistance: 112
+                  }
                 })
-                  .margin({ bottom: Const.DEFAULT_12 })
-                  .height($r('app.float.default_88'))
               }, (item: TaskInfo) => JSON.stringify(item))
             }
             .onAppear(() => {
@@ -317,6 +382,9 @@ export default struct HomeIndex {
       AddBtn({ clickAction: () => {
         this.editTaskAction()
       } })
+
+      AiFloatBtn()
+
       Row() {
         Text($r('app.string.EntryAbility_label'))
           .titleTextStyle()
