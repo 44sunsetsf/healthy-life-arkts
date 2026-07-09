@@ -32,10 +32,17 @@ export struct AiChatPage {
   private scroller: Scroller = new Scroller();
 
   aboutToAppear() {
-    Logger.info(TAG, 'aboutToAppear: fresh start with welcome');
+    this.newConversation();
+  }
+
+  newConversation(): void {
+    Logger.info(TAG, 'newConversation');
     const welcome = new ChatMessage(MessageRole.ASSISTANT,
       '你好！我是你的健康生活AI助手。你可以问我关于健康习惯、饮食、运动等方面的问题，我也可以根据你的打卡数据给你个性化的建议。请问有什么可以帮你的？');
     this.messages = [welcome];
+    this.inputText = '';
+    this.inputRefreshKey++;
+    this.scrollToBottom();
     this.saveMessage(welcome);
   }
 
@@ -205,10 +212,16 @@ export struct AiChatPage {
     Column() {
       Row() {
         Text('历史记录')
-          .fontSize($r('app.float.default_20'))
+          .fontSize($r('app.float.default_18'))
           .fontColor($r('app.color.white'))
           .fontWeight(Const.FONT_WEIGHT_700)
         Blank()
+        Text('➕')
+          .fontSize('16fp')
+          .padding($r('app.float.default_8'))
+          .onClick(() => {
+            this.newConversation();
+          })
         Text('✕')
           .fontSize($r('app.float.default_20'))
           .fontColor($r('app.color.white'))
@@ -337,10 +350,16 @@ export struct AiChatPage {
       Column() {
         Row() {
           Text('AI 助手')
-            .fontSize($r('app.float.default_24'))
+            .fontSize($r('app.float.default_22'))
             .fontColor($r('app.color.white'))
             .fontWeight(Const.FONT_WEIGHT_700)
           Blank()
+          Text('➕')
+            .fontSize('18fp')
+            .padding($r('app.float.default_8'))
+            .onClick(() => {
+              this.newConversation();
+            })
           Text('📋')
             .fontSize('20fp')
             .padding($r('app.float.default_8'))

@@ -83,7 +83,9 @@ ${healthContext}
       if (response.responseCode === 200) {
         const result = JSON.parse(response.result as string) as ApiResponse;
         if (result.choices && result.choices.length > 0) {
-          const replyContent = result.choices[0].message.content;
+          let replyContent = result.choices[0].message.content;
+          replyContent = replyContent.replace(/\*\*(.+?)\*\*/g, '$1');
+          replyContent = replyContent.replace(/\*(.+?)\*/g, '$1');
           Logger.info(TAG, `sendMessage success: replyLen=${replyContent.length}`);
           return replyContent;
         }
