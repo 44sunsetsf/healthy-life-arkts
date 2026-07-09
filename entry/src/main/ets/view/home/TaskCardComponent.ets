@@ -56,52 +56,23 @@ export struct TaskCard {
     }
   }
 
-  // Percentage (0-100) this task is complete, for the Progress bar's value.
-  // isDone tasks (including time-based ones like getup/sleepEarly, whose
-  // targetValue is a time string such as "08: 00" and cannot be parsed as
-  // a number) always resolve to 100. Numeric accumulation tasks (drinkWater,
-  // eatApple, and future step-based tasks) resolve to their fin/target ratio.
-  progressPercent(): number {
-    if (this.taskInfo.isDone) {
-      return Const.DEFAULT_100;
-    }
-    const target = Number(this.taskInfo.targetValue);
-    const fin = Number(this.taskInfo.finValue);
-    if (!target || Number.isNaN(fin)) {
-      return 0;
-    }
-    return Math.min(Const.DEFAULT_100, Math.floor(fin / target * Const.DEFAULT_100));
-  }
-
   build() {
-    Column() {
-      Row() {
-        Row({ space: Const.DEFAULT_6 }) {
-          Image(TaskMapById[this.taskInfo.taskID - 1].icon)
-            .width($r('app.float.default_36')).height($r('app.float.default_36'))
-            .objectFit(ImageFit.Contain)
-          HealthText({
-            title: '',
-            titleResource: TaskMapById[this.taskInfo.taskID - 1].taskName,
-            fontFamily: $r('app.string.HarmonyHeiTi')
-          })
-        }
-
-        this.targetValueBuilder();
+    Row() {
+      Row({ space: Const.DEFAULT_6 }) {
+        Image(TaskMapById[this.taskInfo.taskID - 1].icon)
+          .width($r('app.float.default_36')).height($r('app.float.default_36'))
+          .objectFit(ImageFit.Contain)
+        HealthText({
+          title: '',
+          titleResource: TaskMapById[this.taskInfo.taskID - 1].taskName,
+          fontFamily: $r('app.string.HarmonyHeiTi')
+        })
       }
-      .width(Const.THOUSANDTH_1000)
-      .justifyContent(FlexAlign.SpaceBetween)
 
-      Progress({ value: 0, total: Const.DEFAULT_100, type: ProgressType.Capsule })
-        .value(this.progressPercent())
-        .width(Const.THOUSANDTH_1000)
-        .height($r('app.float.default_6'))
-        .color($r('app.color.blueColor'))
-        .backgroundColor($r('app.color.progress_background_color'))
-        .margin({ top: $r('app.float.default_8') })
+      this.targetValueBuilder();
     }
     .allSize()
-    .justifyContent(FlexAlign.Center)
+    .justifyContent(FlexAlign.SpaceBetween)
     .borderRadius($r('app.float.default_24'))
     .padding({ left: Const.THOUSANDTH_50, right: Const.THOUSANDTH_33 })
     .backgroundColor($r('app.color.white'))

@@ -55,28 +55,57 @@ export const getAllTask = () => {
  */
 const useReminder = (params: TaskInfo, context: Context) => {
   try {
-    let publishReminderInfo = new PublishReminderInfo();
-    publishReminderInfo.hour = Number(params?.startTime.split(':')[0]);
-    publishReminderInfo.minute = Number(params?.startTime.split(':')[1]);
-    publishReminderInfo.daysOfWeek = params?.frequency.split(',').map(item => Number(item));
-    publishReminderInfo.title = RemindContentMap[params?.taskID - 1].title;
-    publishReminderInfo.content = RemindContentMap[params?.taskID - 1].content;
-    publishReminderInfo.notificationId = params?.taskID;
-    publishReminder(publishReminderInfo, context);
+    // Cancel all existing reminders for this task first
+    cancelAllTaskReminders(params.taskID, context);
+
+    // Split startTime to support multiple reminders (e.g. "08:00,12:30,20:00")
+    let times: string[] = params?.startTime.split(',').map(t => t.trim());
+    for (let i = 0; i < times.length; i++) {
+      let time = times[i];
+      let publishReminderInfo = new PublishReminderInfo();
+      publishReminderInfo.hour = Number(time.split(':')[0]);
+      publishReminderInfo.minute = Number(time.split(':')[1]);
+      publishReminderInfo.daysOfWeek = params?.frequency.split(',').map(item => Number(item));
+      publishReminderInfo.title = RemindContentMap[params?.taskID - 1].title;
+      publishReminderInfo.content = RemindContentMap[params?.taskID - 1].content;
+      publishReminderInfo.notificationId = params?.taskID * Const.NOTIFICATION_ID_MULTIPLIER + i;
+      publishReminder(publishReminderInfo, context);
+    }
   } catch (error) {
     Logger.error('publishReminder', JSON.stringify(error));
   }
 }
 
 /**
- * @description Call cancel notification capability
- * @param reminderId Notification ID
+ * @description Call cancel notification capability (cancel all reminders for a task)
+ * @param reminderId Task ID
  */
 const useCancelReminder = (reminderId: number, context: Context) => {
   try {
-    cancelReminder(reminderId, context);
+    cancelAllTaskReminders(reminderId, context);
   } catch (error) {
     Logger.error('cancelReminder', JSON.stringify(error));
+  }
+}
+
+/**
+ * @description Cancel all reminders associated with a task
+ * @param taskID Task ID
+ */
+const cancelAllTaskReminders = (taskID: number, context: Context) => {
+  // Cancel old-style single notification ID (backward compatibility)
+  try {
+    cancelReminder(taskID, context);
+  } catch (error) {
+    Logger.error('cancelAllTaskReminders', JSON.stringify(error));
+  }
+  // Cancel new-style multi notification IDs (up to 3 slots)
+  for (let i = 0; i < 3; i++) {
+    try {
+      cancelReminder(taskID * Const.NOTIFICATION_ID_MULTIPLIER + i, context);
+    } catch (error) {
+      Logger.error('cancelAllTaskReminders', JSON.stringify(error));
+    }
   }
 }
 
@@ -86,7 +115,8 @@ const useCancelReminder = (reminderId: number, context: Context) => {
  */
 const isHasNotificationId = (notificationId: number) => {
   return new Promise<boolean>((resolve) => {
-    resolve(hasNotificationId(notificationId));
+    // Check if any reminder slot exists for this task
+    resolve(hasNotificationId(notificationId * Const.NOTIFICATION_ID_MULTIPLIER));
   });
 }
 
@@ -106,18 +136,10 @@ export const addTask = (params: TaskInfo, context: Context) => {
       if (params?.isAlarm) {
         useReminder(params, context);
       } else {
-        isHasNotificationId(params?.taskID).then((flag: boolean) => {
-          if (flag) {
-            useCancelReminder(params.taskID, context);
-          }
-        });
+        useCancelReminder(params.taskID, context);
       }
     } else {
-      isHasNotificationId(params?.taskID).then((flag: boolean) => {
-        if (flag) {
-          useCancelReminder(params.taskID, context);
-        }
-      });
+      useCancelReminder(params.taskID, context);
     }
     TaskInfoApi.updateDataByDate(params, (flag: number) => {
       if (!flag) {
@@ -236,7 +258,7 @@ export const createAppleRange = () => {
 
 export const createTimesRange = () => {
   const timesRangeArr: Array<string> = [];
-  for (let i = 1; i <= Const.TIMES_50; i++) {
+  for (let i = 1; i <= Const.TIMES_MAX_RANGE; i++) {
     timesRangeArr.push(`${i} 次`);
   }
   return timesRangeArr;

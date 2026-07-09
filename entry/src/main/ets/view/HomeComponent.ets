@@ -19,7 +19,6 @@ import AddBtn from '../view/home/AddBtnComponent';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
-import { ExpGainPopup, LevelUpPopup } from '../view/dialog/ExpGainPopup';
 import TaskInfo from '../viewmodel/TaskInfo';
 import { HomeStore } from '../viewmodel/HomeViewModel';
 import { ITaskItem, TaskMapById } from '../model/TaskInitList';
@@ -57,10 +56,6 @@ export default struct HomeIndex {
   @Link homeStore: HomeStore;
   @Link editedTaskInfo: ITaskItem;
   @Link @Watch('taskChange') editedTaskID: string;
-  @State showExpPopup: boolean = false;
-  @State showLevelUpPopup: boolean = false;
-  @State expGained: number = 0;
-  @State levelUpLevel: number = 1;
   private scroller: Scroller = new Scroller();
   private yOffset: number = 0;
 
@@ -95,16 +90,6 @@ export default struct HomeIndex {
   //confirm clockL
   onConfirm(task: TaskInfo) {
     this.homeStore.taskClock(task).then((res: AchievementInfo) => {
-      if (res.expGained > 0) {
-        this.expGained = res.expGained;
-        this.showExpPopup = true;
-      }
-      if (res.isLevelUp) {
-        this.levelUpLevel = res.newLevel;
-        setTimeout(() => {
-          this.showLevelUpPopup = true;
-        }, 2200);
-      }
       if (res.showAchievement) {
         let achievementLevel = res.achievementLevel;
         if (achievementLevel) {
@@ -146,7 +131,7 @@ export default struct HomeIndex {
                   clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
                 })
                   .margin({ bottom: Const.DEFAULT_12 })
-                  .height($r('app.float.default_88'))
+                  .height($r('app.float.default_64'))
               }, (item: TaskInfo) => JSON.stringify(item))
             }
             .onAppear(() => {
@@ -192,37 +177,6 @@ export default struct HomeIndex {
       .backgroundColor(`rgba(${WHITE_COLOR_0X},${WHITE_COLOR_0X},${WHITE_COLOR_0X},${this.naviAlpha})`)
 
       CustomDialogView()
-
-      if (this.showExpPopup) {
-        Column() {
-          ExpGainPopup({
-            expGained: this.expGained,
-            onDismiss: () => {
-              this.showExpPopup = false;
-            }
-          })
-        }
-        .width(Const.THOUSANDTH_1000)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .hitTestBehavior(HitTestMode.Transparent)
-      }
-
-      if (this.showLevelUpPopup) {
-        Column() {
-          LevelUpPopup({
-            newLevel: this.levelUpLevel,
-            onDismiss: () => {
-              this.showLevelUpPopup = false;
-            }
-          })
-        }
-        .width(Const.THOUSANDTH_1000)
-        .height(Const.THOUSANDTH_1000)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .hitTestBehavior(HitTestMode.Transparent)
-      }
     }
     .allSize()
     .backgroundColor($r('app.color.primaryBgColor'))

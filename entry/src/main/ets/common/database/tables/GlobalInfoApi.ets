@@ -66,14 +66,12 @@ class GlobalInfoApi {
         let result = new GlobalInfo('', '', 0, '');
         callback(result);
       } else {
-        let result = new GlobalInfo('', '', 0, '', 0);
+        let result = new GlobalInfo('', '', 0, '');
         resultSet.goToFirstRow();
         result.firstDate = resultSet.getString(resultSet.getColumnIndex('firstDate'));
         result.lastDate = resultSet.getString(resultSet.getColumnIndex('lastDate'));
         result.checkInDays = resultSet.getDouble(resultSet.getColumnIndex('checkInDays'));
         result.achievements = resultSet.getString(resultSet.getColumnIndex('achievements'));
-        let expIndex = resultSet.getColumnIndex('experience');
-        result.experience = expIndex >= 0 ? resultSet.getDouble(expIndex) : 0;
         callback(result);
       }
     });
@@ -98,9 +96,6 @@ function generateBucket(globalInfo: GlobalInfo): dataRdb.ValuesBucket {
           break;
         case 'achievements':
           valueBucket[item] = globalInfo.achievements;
-          break;
-        case 'experience':
-          valueBucket[item] = globalInfo.experience;
           break;
         default:
           break;
