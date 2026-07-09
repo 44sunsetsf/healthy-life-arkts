@@ -157,6 +157,66 @@ export function seedAchievementData(context: common.Context, callback: (success:
   });
 }
 
+export function breakStreakData(context: common.Context, callback: (success: boolean) => void): void {
+  Logger.info(SEED_TAG, 'breakStreakData start');
+  let yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  let yesterdayStr = dateToStr(yesterday);
+
+  let taskUpdateBucket = {} as dataRdb.ValuesBucket;
+  taskUpdateBucket['isDone'] = 0;
+  taskUpdateBucket['finValue'] = '';
+
+  let dayUpdateBucket = {} as dataRdb.ValuesBucket;
+  dayUpdateBucket['finTaskNum'] = 0;
+
+  let globalBucket = {} as dataRdb.ValuesBucket;
+  globalBucket['checkInDays'] = 0;
+  globalBucket['achievements'] = '';
+
+  let taskPromise = RdbUtils.createDb().then((dbHelper) => {
+    let tn = Const.TASK_INFO.tableName;
+    if (!tn) {
+      return;
+    }
+    let tableName: string = tn;
+    let predicates = new dataRdb.RdbPredicates(tableName);
+    predicates.equalTo('date', yesterdayStr);
+    return dbHelper.update(taskUpdateBucket, predicates);
+  });
+
+  let dayPromise = RdbUtils.createDb().then((dbHelper) => {
+    let tn = Const.DAY_INFO.tableName;
+    if (!tn) {
+      return;
+    }
+    let tableName: string = tn;
+    let predicates = new dataRdb.RdbPredicates(tableName);
+    predicates.equalTo('date', yesterdayStr);
+    return dbHelper.update(dayUpdateBucket, predicates);
+  });
+
+  let globalPromise = RdbUtils.createDb().then((dbHelper) => {
+    let tn = Const.GLOBAL_INFO.tableName;
+    if (!tn) {
+      return;
+    }
+    let tableName: string = tn;
+    let predicates = new dataRdb.RdbPredicates(tableName);
+    predicates.equalTo('id', 0);
+    return dbHelper.update(globalBucket, predicates);
+  });
+
+  Promise.all([taskPromise, dayPromise, globalPromise]).then(() => {
+    Logger.info(SEED_TAG, 'breakStreakData done');
+    AppStorage.SetOrCreate('AchievementLevelKey', 0);
+    callback(true);
+  }).catch((err: Error) => {
+    Logger.error(SEED_TAG, `breakStreakData failed: ${err.message}`);
+    callback(false);
+  });
+}
+
 export function clearAchievementData(context: common.Context, callback: (success: boolean) => void): void {
   Logger.info(SEED_TAG, 'clearAchievementData start');
 

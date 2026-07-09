@@ -34,7 +34,7 @@ import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { ratio2percent, padTo2Digits } from '../common/utils/Utils';
 import Logger from '../common/utils/Logger';
-import { seedAchievementData, clearAchievementData } from '../model/AchievementSeedData';
+import { seedAchievementData, clearAchievementData, breakStreakData } from '../model/AchievementSeedData';
 import prompt from '@ohos.prompt';
 
 const SUB_TEXT_COLOR: string = '#999999';
@@ -331,7 +331,7 @@ export struct AchievementIndex {
   @Builder FullAttendanceContent() {
     Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap }) {
       ForEach(FULL_ATTENDANCE_MILESTONES, (milestone: number) => {
-        Column({ space: Const.DEFAULT_18 }) {
+        Column({ space: Const.SPACE_4 }) {
           Image(this.getBadgeIcon(milestone, this.successiveDays >= milestone))
             .width(Const.FULL_WIDTH)
             .height(Const.ACHIEVE_CARD_IMG_HEIGHT)
@@ -340,6 +340,9 @@ export struct AchievementIndex {
             .lineHeight($r('app.float.default_16'))
             .fontSize($r('app.float.default_12'))
             .fontColor($r('app.color.titleColor'))
+          Text(this.getMilestoneStatusText(this.checkInDays, milestone))
+            .fontSize($r('app.float.default_10'))
+            .fontColor(this.getMilestoneStatusColor(this.checkInDays, milestone))
         }
         .width(ratio2percent(Const.ACHIEVE_SPLIT_RATIO))
         .padding({ top: Const.ACHIEVE_CARD_TOP, bottom: Const.ACHIEVE_CARD_BOTTOM })
@@ -417,7 +420,10 @@ export struct AchievementIndex {
                   .objectFit(ImageFit.Contain)
                 Text(`${milestone}`)
                   .fontSize($r('app.float.default_10'))
-                  .fontColor(SUB_TEXT_COLOR)
+                  .fontColor(stats.streak >= milestone ? $r('app.color.titleColor') : SUB_TEXT_COLOR)
+                Text(this.getTaskMilestoneStatusText(stats.streak, milestone))
+                  .fontSize(8)
+                  .fontColor(stats.streak >= milestone ? PROGRESS_COLOR : SUB_TEXT_COLOR)
               }
               .onClick(() => this.showTaskMilestoneDialog(stats, milestone))
             }, (milestone: number) => `mini_${stats.taskID}_${milestone}_${stats.streak}`)
@@ -427,9 +433,12 @@ export struct AchievementIndex {
                 .width(MINI_BADGE_SIZE)
                 .aspectRatio(1)
                 .objectFit(ImageFit.Contain)
-              Text('奖杯')
+              Text(getTrophyLevel(stats.streak) > 0 ? `LV${getTrophyLevel(stats.streak)}` : '奖杯')
                 .fontSize($r('app.float.default_10'))
-                .fontColor(SUB_TEXT_COLOR)
+                .fontColor(getTrophyLevel(stats.streak) > 0 ? $r('app.color.titleColor') : SUB_TEXT_COLOR)
+              Text(this.getTrophyStatusText(getTrophyLevel(stats.streak)))
+                .fontSize(8)
+                .fontColor(getTrophyLevel(stats.streak) > 0 ? PROGRESS_COLOR : SUB_TEXT_COLOR)
             }
             .onClick(() => this.showTaskTrophyDialog(stats))
           }
@@ -484,18 +493,20 @@ export struct AchievementIndex {
           }
           .width(Const.FULL_WIDTH)
 
-          Row() {
+          Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
             ForEach(OVER_ACHIEVE_PERCENTS, (percent: number) => {
-              Image(getPercentIcon(percent, percent <= this.getMaxPercent(stats)))
-                .width(PERCENT_BADGE_WIDTH)
-                .aspectRatio(1)
-                .objectFit(ImageFit.Contain)
-                .onClick(() => this.showPercentDialog(stats, percent))
+              Column({ space: 2 }) {
+                Image(getPercentIcon(percent, percent <= this.getMaxPercent(stats)))
+                  .width(PERCENT_BADGE_WIDTH)
+                  .aspectRatio(1)
+                  .objectFit(ImageFit.Contain)
+                Text(this.getOverBadgeStatusText(percent <= this.getMaxPercent(stats)))
+                  .fontSize(8)
+                  .fontColor(percent <= this.getMaxPercent(stats) ? PROGRESS_COLOR : SUB_TEXT_COLOR)
+              }
+              .onClick(() => this.showPercentDialog(stats, percent))
             }, (percent: number) => `percent_${stats.taskID}_${percent}_${this.getMaxPercent(stats)}`)
           }
-          .width(Const.FULL_WIDTH)
-          .justifyContent(FlexAlign.SpaceBetween)
-          .margin({ top: Const.DEFAULT_12 })
         }
         .width(Const.FULL_WIDTH)
         .padding(Const.DEFAULT_16)
@@ -505,6 +516,26 @@ export struct AchievementIndex {
     }
     .width(Const.FULL_WIDTH)
     .padding({ left: Const.DEFAULT_10, right: Const.DEFAULT_10, top: Const.DEFAULT_12 })
+  }
+
+  getMilestoneStatusText(current: number, milestone: number): string {
+    return current >= milestone ? '已点亮' : `还差 ${milestone - Math.min(current, milestone)} 天`;
+  }
+
+  getMilestoneStatusColor(current: number, milestone: number): string {
+    return current >= milestone ? PROGRESS_COLOR : SUB_TEXT_COLOR;
+  }
+
+  getTaskMilestoneStatusText(streak: number, milestone: number): string {
+    return streak >= milestone ? '已点亮' : `${streak}/${milestone}`;
+  }
+
+  getTrophyStatusText(level: number): string {
+    return level > 0 ? '已点亮' : '未获得';
+  }
+
+  getOverBadgeStatusText(lit: boolean): string {
+    return lit ? '已点亮' : '未达成';
   }
 
   tapCount: number = 0;
@@ -522,21 +553,18 @@ export struct AchievementIndex {
     this.lastTapTime = now;
     if (this.tapCount >= this.DEV_TAP_THRESHOLD) {
       this.tapCount = 0;
-      AlertDialog.show({
+      ActionSheet.show({
         title: '开发者工具',
-        message: '选择操作（数据变更后需重启应用生效）',
-        primaryButton: {
-          value: '填充满级数据',
-          action: () => {
-            this.doSeedData();
-          }
+        message: '数据变更后需重启应用生效',
+        confirm: {
+          value: '取消',
+          action: () => {}
         },
-        secondaryButton: {
-          value: '清除所有数据',
-          action: () => {
-            this.doClearData();
-          }
-        }
+        sheets: [
+          { title: '填充满级数据', action: () => { this.doSeedData(); } },
+          { title: '模拟中断（勋章熄灭）', action: () => { this.doBreakStreak(); } },
+          { title: '清除所有数据', action: () => { this.doClearData(); } }
+        ]
       });
     }
   }
@@ -544,9 +572,21 @@ export struct AchievementIndex {
   doSeedData(): void {
     seedAchievementData(getContext(this), (ok: boolean) => {
       if (ok) {
-        prompt.showToast({ message: '测试数据已填充，请重启应用' });
+        prompt.showToast({ message: '数据已填充' });
+        this.refreshData();
       } else {
         prompt.showToast({ message: '填充失败' });
+      }
+    });
+  }
+
+  doBreakStreak(): void {
+    breakStreakData(getContext(this), (ok: boolean) => {
+      if (ok) {
+        prompt.showToast({ message: '已模拟中断' });
+        this.refreshData();
+      } else {
+        prompt.showToast({ message: '操作失败' });
       }
     });
   }
@@ -554,7 +594,8 @@ export struct AchievementIndex {
   doClearData(): void {
     clearAchievementData(getContext(this), (ok: boolean) => {
       if (ok) {
-        prompt.showToast({ message: '数据已清除，请重启应用' });
+        prompt.showToast({ message: '数据已清除' });
+        this.refreshData();
       } else {
         prompt.showToast({ message: '清除失败' });
       }
