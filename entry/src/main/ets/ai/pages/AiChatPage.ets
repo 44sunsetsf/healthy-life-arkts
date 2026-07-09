@@ -13,21 +13,88 @@ const TAG = 'AiChatPage';
 const TASK_NAMES: string[] = ['早起', '喝水', '吃苹果', '每日微笑', '每日刷牙', '早睡'];
 const TASK_UNITS: string[] = ['', '', '个', '次', '次', ''];
 
+interface Conversation {
+  title: string;
+  date: string;
+  msgCount: number;
+  timeStart: number;
+  timeEnd: number;
+}
+
 @Component
 export struct AiChatPage {
   @State messages: ChatMessage[] = [];
   @State inputText: string = '';
   @State isLoading: boolean = false;
   @State inputRefreshKey: number = 0;
+  @State showHistory: boolean = false;
+  @State conversations: Conversation[] = [];
   private scroller: Scroller = new Scroller();
 
   aboutToAppear() {
-    Logger.info(TAG, 'aboutToAppear: loading chat history from DB');
+    Logger.info(TAG, 'aboutToAppear: fresh start with welcome');
+    const welcome = new ChatMessage(MessageRole.ASSISTANT,
+      '你好！我是你的健康生活AI助手。你可以问我关于健康习惯、饮食、运动等方面的问题，我也可以根据你的打卡数据给你个性化的建议。请问有什么可以帮你的？');
+    this.messages = [welcome];
+    this.saveMessage(welcome);
+  }
+
+  loadHistory(): void {
+    Logger.info(TAG, 'loadHistory: querying DB');
     ChatMsgApi.queryAll((rows: ChatMsgRow[]) => {
-      if (rows && rows.length > 0) {
-        Logger.info(TAG, `aboutToAppear: loaded ${rows.length} messages from DB`);
-        const dbMessages: ChatMessage[] = [];
-        for (const row of rows) {
+      if (!rows || rows.length === 0) {
+        Logger.info(TAG, 'loadHistory: no history');
+        this.conversations = [];
+        return;
+      }
+      const groups: Conversation[] = [];
+      let currentStart = rows[0].timestamp;
+      let currentEnd = rows[0].timestamp;
+      let firstUserMsg = '';
+      let count = 0;
+
+      for (let i = 0; i < rows.length; i++) {
+        const ts = rows[i].timestamp;
+        if (ts - currentEnd > 30 * 60 * 1000) {
+          if (count > 0 && firstUserMsg) {
+            groups.push({
+              title: firstUserMsg,
+              date: new Date(currentStart).toLocaleString(),
+              msgCount: count,
+              timeStart: currentStart,
+              timeEnd: currentEnd
+            });
+          }
+          currentStart = ts;
+          firstUserMsg = '';
+          count = 0;
+        }
+        currentEnd = ts;
+        count++;
+        if (!firstUserMsg && rows[i].role === 'user') {
+          firstUserMsg = rows[i].content;
+        }
+      }
+      if (count > 0 && firstUserMsg) {
+        groups.push({
+          title: firstUserMsg,
+          date: new Date(currentStart).toLocaleString(),
+          msgCount: count,
+          timeStart: currentStart,
+          timeEnd: currentEnd
+        });
+      }
+      this.conversations = groups.reverse();
+      Logger.info(TAG, `loadHistory: ${this.conversations.length} conversations`);
+    });
+  }
+
+  restoreConversation(conv: Conversation): void {
+    Logger.info(TAG, `restoreConversation: ${conv.timeStart} - ${conv.timeEnd}`);
+    ChatMsgApi.queryAll((rows: ChatMsgRow[]) => {
+      const msgs: ChatMessage[] = [];
+      for (const row of rows) {
+        if (row.timestamp >= conv.timeStart && row.timestamp <= conv.timeEnd) {
           let msgRole: MessageRole = MessageRole.ASSISTANT;
           if (row.role === 'user') {
             msgRole = MessageRole.USER;
@@ -36,17 +103,13 @@ export struct AiChatPage {
           }
           const msg = new ChatMessage(msgRole, row.content);
           msg.timestamp = row.timestamp;
-          dbMessages.push(msg);
+          msgs.push(msg);
         }
-        this.messages = dbMessages;
-        this.scrollToBottom();
-      } else {
-        Logger.info(TAG, 'aboutToAppear: no history, creating welcome message');
-        const welcome = new ChatMessage(MessageRole.ASSISTANT,
-          '你好！我是你的健康生活AI助手。你可以问我关于健康习惯、饮食、运动等方面的问题，我也可以根据你的打卡数据给你个性化的建议。请问有什么可以帮你的？');
-        this.messages = [welcome];
-        this.saveMessage(welcome);
       }
+      this.messages = msgs;
+      this.showHistory = false;
+      this.scrollToBottom();
+      Logger.info(TAG, `restoreConversation: loaded ${msgs.length} messages`);
     });
   }
 
@@ -100,7 +163,6 @@ export struct AiChatPage {
   async sendMessage() {
     const text = this.inputText.trim();
     if (!text || this.isLoading) {
-      Logger.debug(TAG, `sendMessage blocked: isEmpty=${!text}, isLoading=${this.isLoading}`);
       return;
     }
 
@@ -136,6 +198,88 @@ export struct AiChatPage {
     setTimeout(() => {
       this.scroller.scrollEdge(Edge.Bottom);
     }, 100);
+  }
+
+  @Builder
+  buildHistoryPanel() {
+    Column() {
+      Row() {
+        Text('历史记录')
+          .fontSize($r('app.float.default_20'))
+          .fontColor($r('app.color.white'))
+          .fontWeight(Const.FONT_WEIGHT_700)
+        Blank()
+        Text('✕')
+          .fontSize($r('app.float.default_20'))
+          .fontColor($r('app.color.white'))
+          .padding($r('app.float.default_8'))
+          .onClick(() => {
+            this.showHistory = false;
+          })
+      }
+      .width(Const.THOUSANDTH_1000)
+      .height(Const.DEFAULT_56)
+      .backgroundColor($r('app.color.blueColor'))
+      .padding({ left: Const.THOUSANDTH_33, right: Const.THOUSANDTH_33 })
+
+      if (this.conversations.length === 0) {
+        Column() {
+          Text('暂无历史记录')
+            .fontSize($r('app.float.default_14'))
+            .fontColor($r('app.color.statusTipColor'))
+            .margin({ top: $r('app.float.default_100') })
+        }
+        .width(Const.THOUSANDTH_1000)
+        .layoutWeight(1)
+        .backgroundColor($r('app.color.primaryBgColor'))
+      } else {
+        Scroll() {
+          Column() {
+            ForEach(this.conversations, (conv: Conversation, index: number) => {
+              Row() {
+                Column() {
+                  Text(conv.title.length > 30 ? conv.title.substring(0, 30) + '...' : conv.title)
+                    .fontSize($r('app.float.default_14'))
+                    .fontColor($r('app.color.titleColor'))
+                    .fontWeight(Const.FONT_WEIGHT_500)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text(`${conv.date}  ·  ${conv.msgCount}条消息`)
+                    .fontSize($r('app.float.default_12'))
+                    .fontColor($r('app.color.statusTipColor'))
+                    .margin({ top: $r('app.float.default_4') })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+
+                Text('→')
+                  .fontSize($r('app.float.default_16'))
+                  .fontColor($r('app.color.blueColor'))
+              }
+              .width(Const.THOUSANDTH_1000)
+              .padding({
+                left: Const.THOUSANDTH_33,
+                right: Const.THOUSANDTH_33,
+                top: $r('app.float.default_14'),
+                bottom: $r('app.float.default_14')
+              })
+              .backgroundColor($r('app.color.white'))
+              .border({ width: { bottom: '0.5vp' }, color: '#E0E0E0' })
+              .onClick(() => {
+                this.restoreConversation(conv);
+              })
+            }, (conv: Conversation, index: number) => conv.timeStart.toString())
+          }
+          .width(Const.THOUSANDTH_1000)
+        }
+        .scrollBar(BarState.Off)
+        .layoutWeight(1)
+        .backgroundColor($r('app.color.primaryBgColor'))
+      }
+    }
+    .width(Const.THOUSANDTH_1000)
+    .height(Const.THOUSANDTH_1000)
+    .backgroundColor($r('app.color.primaryBgColor'))
   }
 
   @Builder
@@ -183,88 +327,104 @@ export struct AiChatPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        Text('AI 助手')
-          .fontSize($r('app.float.default_24'))
-          .fontColor($r('app.color.white'))
-          .fontWeight(Const.FONT_WEIGHT_700)
+    if (this.showHistory) {
+      Column() {
+        this.buildHistoryPanel()
       }
       .width(Const.THOUSANDTH_1000)
-      .height(Const.DEFAULT_56)
-      .backgroundColor($r('app.color.blueColor'))
-      .justifyContent(FlexAlign.Center)
-
-      Scroll(this.scroller) {
-        Column() {
-          ForEach(this.messages, (msg: ChatMessage, index: number) => {
-            this.buildMessageBubble(msg)
-          }, (msg: ChatMessage, index: number) => index.toString())
-        }
-        .width(Const.THOUSANDTH_1000)
-        .padding({ top: $r('app.float.default_8'), bottom: $r('app.float.default_8') })
-      }
-      .scrollBar(BarState.Off)
-      .layoutWeight(1)
-      .backgroundColor($r('app.color.primaryBgColor'))
-
-      if (this.isLoading) {
+      .height(Const.THOUSANDTH_1000)
+    } else {
+      Column() {
         Row() {
-          LoadingProgress()
-            .width($r('app.float.default_24'))
-            .height($r('app.float.default_24'))
-            .color($r('app.color.blueColor'))
-          Text('AI正在思考...')
-            .fontSize($r('app.float.default_12'))
-            .fontColor($r('app.color.statusTipColor'))
-            .margin({ left: $r('app.float.default_8') })
+          Text('AI 助手')
+            .fontSize($r('app.float.default_24'))
+            .fontColor($r('app.color.white'))
+            .fontWeight(Const.FONT_WEIGHT_700)
+          Blank()
+          Text('📋')
+            .fontSize('20fp')
+            .padding($r('app.float.default_8'))
+            .onClick(() => {
+              this.loadHistory();
+              this.showHistory = true;
+            })
         }
         .width(Const.THOUSANDTH_1000)
-        .height($r('app.float.default_36'))
-        .justifyContent(FlexAlign.Center)
+        .height(Const.DEFAULT_56)
+        .backgroundColor($r('app.color.blueColor'))
+        .padding({ left: Const.THOUSANDTH_33, right: Const.THOUSANDTH_33 })
+
+        Scroll(this.scroller) {
+          Column() {
+            ForEach(this.messages, (msg: ChatMessage, index: number) => {
+              this.buildMessageBubble(msg)
+            }, (msg: ChatMessage, index: number) => index.toString())
+          }
+          .width(Const.THOUSANDTH_1000)
+          .padding({ top: $r('app.float.default_8'), bottom: $r('app.float.default_8') })
+        }
+        .scrollBar(BarState.Off)
+        .layoutWeight(1)
+        .backgroundColor($r('app.color.primaryBgColor'))
+
+        if (this.isLoading) {
+          Row() {
+            LoadingProgress()
+              .width($r('app.float.default_24'))
+              .height($r('app.float.default_24'))
+              .color($r('app.color.blueColor'))
+            Text('AI正在思考...')
+              .fontSize($r('app.float.default_12'))
+              .fontColor($r('app.color.statusTipColor'))
+              .margin({ left: $r('app.float.default_8') })
+          }
+          .width(Const.THOUSANDTH_1000)
+          .height($r('app.float.default_36'))
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor($r('app.color.white'))
+        }
+
+        Row() {
+          TextInput({ placeholder: '输入你的问题...' })
+            .key(`input_${this.inputRefreshKey}`)
+            .fontSize($r('app.float.default_14'))
+            .fontColor($r('app.color.titleColor'))
+            .layoutWeight(1)
+            .height($r('app.float.default_40'))
+            .backgroundColor($r('app.color.primaryBgColor'))
+            .borderRadius($r('app.float.default_20'))
+            .padding({ left: $r('app.float.default_12'), right: $r('app.float.default_12') })
+            .defaultFocus(true)
+            .focusable(true)
+            .onChange((value: string) => {
+              this.inputText = value;
+            })
+            .onSubmit(() => {
+              this.sendMessage();
+            })
+
+          Button('发送')
+            .fontSize($r('app.float.default_14'))
+            .height($r('app.float.default_40'))
+            .backgroundColor($r('app.color.blueColor'))
+            .fontColor($r('app.color.white'))
+            .borderRadius($r('app.float.default_20'))
+            .margin({ left: $r('app.float.default_8') })
+            .onClick(() => {
+              this.sendMessage();
+            })
+        }
+        .width(Const.THOUSANDTH_1000)
+        .padding({
+          left: Const.THOUSANDTH_33,
+          right: Const.THOUSANDTH_33,
+          top: $r('app.float.default_8'),
+          bottom: $r('app.float.default_8')
+        })
         .backgroundColor($r('app.color.white'))
       }
-
-      Row() {
-        TextInput({ placeholder: '输入你的问题...' })
-          .key(`input_${this.inputRefreshKey}`)
-          .fontSize($r('app.float.default_14'))
-          .fontColor($r('app.color.titleColor'))
-          .layoutWeight(1)
-          .height($r('app.float.default_40'))
-          .backgroundColor($r('app.color.primaryBgColor'))
-          .borderRadius($r('app.float.default_20'))
-          .padding({ left: $r('app.float.default_12'), right: $r('app.float.default_12') })
-          .defaultFocus(true)
-          .focusable(true)
-          .onChange((value: string) => {
-            this.inputText = value;
-          })
-          .onSubmit(() => {
-            this.sendMessage();
-          })
-
-        Button('发送')
-          .fontSize($r('app.float.default_14'))
-          .height($r('app.float.default_40'))
-          .backgroundColor($r('app.color.blueColor'))
-          .fontColor($r('app.color.white'))
-          .borderRadius($r('app.float.default_20'))
-          .margin({ left: $r('app.float.default_8') })
-          .onClick(() => {
-            this.sendMessage();
-          })
-      }
       .width(Const.THOUSANDTH_1000)
-      .padding({
-        left: Const.THOUSANDTH_33,
-        right: Const.THOUSANDTH_33,
-        top: $r('app.float.default_8'),
-        bottom: $r('app.float.default_8')
-      })
-      .backgroundColor($r('app.color.white'))
+      .height(Const.THOUSANDTH_1000)
     }
-    .width(Const.THOUSANDTH_1000)
-    .height(Const.THOUSANDTH_1000)
   }
 }
