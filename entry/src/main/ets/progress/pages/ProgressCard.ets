@@ -21,6 +21,9 @@ struct ProgressCard {
   @LocalStorageProp('numerator') numerator: number = 0;
   @LocalStorageProp('denominator') denominator: number = 0;
   @LocalStorageProp('percent') percent: string = '0';
+  @LocalStorageProp('healthSteps') healthSteps: string = '0';
+  @LocalStorageProp('healthWater') healthWater: string = '900';
+  @LocalStorageProp('healthCalories') healthCalories: string = '1449';
 
   /*
    * The action type.
@@ -74,43 +77,76 @@ struct ProgressCard {
 
   build() {
     Column() {
-      Stack() {
-        Progress({ value: 0, total: this.PROGRESS_TOTAL, type: ProgressType.Ring })
-          .value(Number.parseInt(this.percent))
-          .width($r('app.float.progress_component_size'))
-          .height($r('app.float.progress_component_size'))
-          .backgroundColor($r('app.color.progress_background_color'))
-          .style({ strokeWidth: $r('app.float.progress_stroke_width') })
-        Row() {
-          Text(this.percent)
-            .fontSize($r('app.float.percent_text_size'))
-            .fontColor(Color.Black)
-            .fontWeight(FontWeight.Normal)
-          Text(this.PERCENTAGE)
-            .fontSize($r('app.float.percent_sign_size'))
-            .fontColor(Color.Black)
-            .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-            .margin({ top: $r('app.float.percent_sign_margin') })
-        }
-        .justifyContent(FlexAlign.Center)
+      Row() {
+        Text('今日健康')
+          .fontSize(14)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#182431')
+          .layoutWeight(1)
+        Text(`${this.numerator}${this.SLASHES}${this.denominator}`)
+          .fontSize(12)
+          .fontColor('#72787E')
       }
-      .height(this.PROGRESS_LAYOUT_HEIGHT)
+      .width(this.FULL_WIDTH_PERCENT)
+      .alignItems(VerticalAlign.Center)
 
       Row() {
-        Text(this.numerator.toString())
-          .fontColor($r('app.color.numerator_text_color'))
-          .fontSize($r('app.float.numerator_text_size'))
-          .lineHeight($r('app.float.numerator_line_height'))
-          .fontWeight(FontWeight.Normal)
-        Text(this.SLASHES + this.denominator)
-          .fontColor($r('app.color.denominator_text_color'))
-          .fontSize($r('app.float.denominator_text_size'))
-          .lineHeight($r('app.float.denominator_line_height'))
-          .fontWeight(FontWeight.Normal)
+        Stack() {
+          Progress({ value: 0, total: this.PROGRESS_TOTAL, type: ProgressType.Ring })
+            .value(Number.parseInt(this.percent))
+            .width(68)
+            .height(68)
+            .color('#30C6B0')
+            .backgroundColor('#E8F8F5')
+            .style({ strokeWidth: 8 })
+          Column() {
+            Row() {
+              Text(this.percent)
+                .fontSize(18)
+                .fontColor('#182431')
+                .fontWeight(FontWeight.Bold)
+              Text(this.PERCENTAGE)
+                .fontSize(10)
+                .fontColor('#182431')
+                .fontWeight(this.TEXT_SLIGHTLY_BOLD)
+                .margin({ top: 6 })
+            }
+            .justifyContent(FlexAlign.Center)
+            Text('任务')
+              .fontSize(10)
+              .fontColor('#8A94A3')
+          }
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width(74)
+        .height(74)
+
+        Column({ space: 4 }) {
+          Text(`${this.numerator}${this.SLASHES}${this.denominator}`)
+            .fontSize(20)
+            .fontColor('#182431')
+            .fontWeight(FontWeight.Bold)
+          Text('已完成任务')
+            .fontSize(10)
+            .fontColor('#8A94A3')
+        }
+        .layoutWeight(1)
+        .margin({ left: 10 })
       }
-      .height(this.RESULTS_LAYOUT_HEIGHT)
+      .layoutWeight(1)
+      .width(this.FULL_WIDTH_PERCENT)
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: 4 }) {
+        this.HealthMetric('步数', this.formatHealthValue(this.healthSteps, '步'))
+        this.HealthMetric('饮水', this.formatHealthValue(this.healthWater, 'ml'))
+        this.HealthMetric('还能吃', this.formatHealthValue(this.healthCalories, '千卡'))
+      }
+      .width(this.FULL_WIDTH_PERCENT)
+      .margin({ top: 4 })
     }
-    .backgroundColor($r("app.color.progress_column_color"))
+    .padding(12)
+    .backgroundColor('#F7FBFA')
     .width(this.FULL_WIDTH_PERCENT)
     .height(this.FULL_HEIGHT_PERCENT)
     .onClick(() => {
@@ -119,5 +155,30 @@ struct ProgressCard {
         'abilityName': this.ABILITY_NAME
       });
     })
+  }
+
+  formatHealthValue(value: string, unit: string): string {
+    if (value === '--') {
+      return '--';
+    }
+    return `${value}${unit}`;
+  }
+
+  @Builder HealthMetric(label: string, valueText: string) {
+    Column({ space: 2 }) {
+      Text(label)
+        .fontSize(9)
+        .fontColor('#8A94A3')
+      Text(valueText)
+        .fontSize(10)
+        .fontColor('#182431')
+        .fontWeight(FontWeight.Bold)
+        .maxLines(1)
+    }
+    .padding({ top: 4, bottom: 4, left: 2, right: 2 })
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#ECF7F5')
+    .borderRadius(6)
   }
 }

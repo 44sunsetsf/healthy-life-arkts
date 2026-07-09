@@ -1,4 +1,9 @@
-import { FoodAnalysisResult, HealthCalendarDay, HealthDashboardData } from '../model/HealthDashboardModel';
+import {
+  FoodAnalysisResult,
+  HealthCalendarDay,
+  HealthCardRecord,
+  HealthDashboardData
+} from '../model/HealthDashboardModel';
 
 const DEFAULT_SLEEP_HOURS: number = 7.75;
 const DEFAULT_WATER_GOAL: number = 2000;
@@ -14,7 +19,9 @@ const WEEK_TEXTS: string[] = ['日', '一', '二', '三', '四', '五', '六'];
 export class HealthMockService {
   createInitialData(): HealthDashboardData {
     let data = new HealthDashboardData();
-    data.dateText = this.formatDate(new Date());
+    let today = new Date();
+    data.dateKey = this.formatDateKey(today);
+    data.dateText = this.formatDate(today);
     data.waterGoalMl = DEFAULT_WATER_GOAL;
     data.baseCalories = this.calculateBaseCalories(data.weightKg);
     data.analysisText = '输入今天吃了什么，点击分析后会给出一条演示建议。';
@@ -125,8 +132,18 @@ export class HealthMockService {
     return remaining;
   }
 
+  createCardRecord(data: HealthDashboardData): HealthCardRecord {
+    let record = new HealthCardRecord();
+    record.date = data.dateKey;
+    record.steps = data.steps;
+    record.waterMl = data.waterMl;
+    record.remainingCalories = this.getRemainingCalories(data);
+    return record;
+  }
+
   private createDashboardData(day: HealthCalendarDay): HealthDashboardData {
     let data = new HealthDashboardData();
+    data.dateKey = day.dateKey;
     data.dateText = day.dateText;
     data.waterGoalMl = DEFAULT_WATER_GOAL;
     data.weightKg = this.getDemoWeight(day.dayOffset);
@@ -405,6 +422,7 @@ export class HealthMockService {
     let data = new HealthDashboardData();
     data.hasWatchData = source.hasWatchData;
     data.syncCount = source.syncCount;
+    data.dateKey = source.dateKey;
     data.dateText = source.dateText;
     data.updateText = source.updateText;
     data.watchSourceText = source.watchSourceText;

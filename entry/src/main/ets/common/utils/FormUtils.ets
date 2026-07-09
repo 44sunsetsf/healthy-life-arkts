@@ -24,7 +24,11 @@ import FormInfo from '../../viewmodel/FormInfo';
 import Logger from '../utils/Logger';
 import ProgressCardInfo from '../../viewmodel/ProgressCardInfo';
 import TaskInfo, { taskType } from '../../viewmodel/TaskInfo';
-import { columnDayInfoList, columnTaskInfoInfoList, columnFormInfoList } from '../../model/RdbColumnModel';
+import {
+  columnDayInfoList,
+  columnTaskInfoInfoList,
+  columnFormInfoList
+} from '../../model/RdbColumnModel';
 import {
   CommonConstants as Const,
   Unit,
@@ -32,6 +36,9 @@ import {
 } from '../constants/CommonConstants';
 import DayInfo from '../../viewmodel/DayInfo';
 import { GlobalContext } from './GlobalContext';
+import { HealthCardRecord } from '../../health/model/HealthDashboardModel';
+import HealthInfoApi from '../database/tables/HealthInfoApi';
+import { HealthMockService } from '../../health/service/HealthMockService';
 
 class FormUtils {
   /**
@@ -186,7 +193,7 @@ class FormUtils {
 
   private processTaskData(formInfo: FormInfo, data: TaskInfo[]): void {
     let taskList: AgencyCardInfo[] = this.fetchResult(data);
-    let obj: ProgressCardInfo = {};
+    let obj: ProgressCardInfo = new ProgressCardInfo();
     obj.taskList = taskList;
     obj.showWidget = taskList.length === 0 ? false : true;
     let formData = formBindingData.createFormBindingData(obj);
@@ -208,10 +215,56 @@ class FormUtils {
     obj.numerator = finTaskNum;
     obj.denominator = targetTaskNum;
     obj.percent = percent;
+    this.fillDefaultHealthCardData(obj);
+    this.updateProgressForm(formInfo, obj);
+    this.fillHealthCardData(formInfo, obj);
+  }
+
+  private updateProgressForm(formInfo: FormInfo, obj: ProgressCardInfo): void {
     let formData = formBindingData.createFormBindingData(obj);
     formProvider.updateForm(formInfo.formId, formData).catch((err: Error) => {
-      Logger.error(Const.TAG, `processDayData updateForm, err: ${JSON.stringify(err)}`);
+      Logger.error(Const.TAG, `updateProgressForm updateForm, err: ${JSON.stringify(err)}`);
     });
+  }
+
+  private fillHealthCardData(formInfo: FormInfo, obj: ProgressCardInfo): void {
+    HealthInfoApi.query(this.formatDateKey(new Date()), (record: HealthCardRecord) => {
+      if (record.date.length <= 0) {
+        this.saveDefaultHealthCardData();
+      } else {
+        obj.healthSteps = record.steps.toString();
+        obj.healthWater = record.waterMl.toString();
+        obj.healthCalories = record.remainingCalories.toString();
+        this.updateProgressForm(formInfo, obj);
+      }
+    });
+  }
+
+  private fillDefaultHealthCardData(obj: ProgressCardInfo): void {
+    let healthService = new HealthMockService();
+    let record = healthService.createCardRecord(healthService.createInitialData());
+    obj.healthSteps = record.steps.toString();
+    obj.healthWater = record.waterMl.toString();
+    obj.healthCalories = record.remainingCalories.toString();
+  }
+
+  private saveDefaultHealthCardData(): void {
+    let healthService = new HealthMockService();
+    let record = healthService.createCardRecord(healthService.createInitialData());
+    HealthInfoApi.saveData(record, () => {});
+  }
+
+  private formatDateKey(date: Date): string {
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+    return `${date.getFullYear()}${this.formatTwoDigits(month)}${this.formatTwoDigits(day)}`;
+  }
+
+  private formatTwoDigits(value: number): string {
+    if (value < 10) {
+      return `0${value}`;
+    }
+    return value.toString();
   }
 
   private getTemp(temp: AgencyCardInfo, taskType: string, unit: string,

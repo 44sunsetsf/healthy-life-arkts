@@ -1,4 +1,5 @@
 export class HealthDashboardData {
+  dateKey: string = '';
   hasWatchData: boolean = false;
   syncCount: number = 0;
   dateText: string = '';
@@ -51,4 +52,11 @@ export class FoodAnalysisResult {
   sodiumMg: number = 0;
   matchedFoodText: string = '';
   advice: string = '';
+}
+
+export class HealthCardRecord {
+  date: string = '';
+  steps: number = 0;
+  waterMl: number = 0;
+  remainingCalories: number = 0;
 }
