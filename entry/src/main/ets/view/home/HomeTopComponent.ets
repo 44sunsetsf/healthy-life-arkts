@@ -28,7 +28,7 @@ import HealthText from '../../view/HealthTextComponent';
 
 @Component
 export default struct HomeTopView {
-  @Link homeStore: HomeStore;
+  @ObjectLink homeStore: HomeStore;
 
   build() {
     Column() {
@@ -51,7 +51,7 @@ export default struct HomeTopView {
       .width(Const.THOUSANDTH_1000)
       .padding({ left: $r('app.float.default_24') })
 
-      WeekCalendar({ homeStore:  $homeStore })
+      WeekCalendar({ homeStore: this.homeStore })
     }
     .height(Const.THOUSANDTH_500)
     .backgroundImagePosition({x: 0, y: 0})

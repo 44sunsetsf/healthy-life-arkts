@@ -20,8 +20,7 @@ import {
   columnGlobalInfoList,
   columnTaskInfoInfoList,
   columnFormInfoList,
-  columnUserInfoList,
-  columnChatMsgList
+  columnUserInfoList
 } from '../model/RdbColumnModel';
 import RdbUtils from '../common/database/rdb/RdbUtils';
 import Logger from '../common/utils/Logger';
@@ -77,12 +76,6 @@ export default class EntryAbility extends UIAbility {
       new ColumnInfo('signature', 'text', -1, false, false, false)).then(() => {
       Logger.info(`RdbHelper addColumn signature success`);
     }).catch(() => {});
-    RdbUtils.createTable(Const.CHAT_MSG.tableName ? Const.CHAT_MSG.tableName : '', columnChatMsgList)
-      .then(() => {
-        Logger.info(`RdbHelper createTable chatMsg success`);
-      }).catch((err: Error) => {
-        Logger.error(`RdbHelper chatMsg err : ${JSON.stringify(err)}`);
-      });
   }
 
   onWindowStageCreate(windowStage: window.WindowStage) {

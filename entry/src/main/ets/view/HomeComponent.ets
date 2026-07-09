@@ -16,7 +16,6 @@
 import router from '@ohos.router';
 import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
-import { AiFloatBtn } from '../ai/view/AiFloatBtn';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
@@ -28,11 +27,12 @@ import { HealthDataSrcMgr } from '../common/utils/HealthDataSrcMgr';
 import { BroadCast, BroadCastType } from '../common/utils/BroadCast';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import AchievementInfo from '../viewmodel/AchievementInfo';
-import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
-import { dateToStr } from '../common/utils/Utils';
-import Logger from '../common/utils/Logger';
+import { WeekDateModel } from '../model/WeekCalendarModel';
+import { sameDate } from '../common/utils/Utils';
 
 const WHITE_COLOR_0X = 255;
+const MONTH_DAY_WIDTH: number = 100 / Const.WEEK_DAY_NUM;
+const MONTH_WEEK_TITLES: string[] = ['一', '二', '三', '四', '五', '六', '日'];
 
 @Styles
 function allSize() {
@@ -46,7 +46,7 @@ function titleTextStyle() {
   .fontWeight(Const.FONT_WEIGHT_500)
   .width(Const.THOUSANDTH_1000)
   .fontFamily($r('app.string.HarmonyHeiTi_Medium'))
-  .fontColor($r('app.color.titleColor'))
+  .fontColor($r(`app.element.color.titleColor`))
   .padding({
     top: Const.THOUSANDTH_15,
     bottom: Const.THOUSANDTH_15,
@@ -77,72 +77,23 @@ export default struct HomeIndex {
       return;
     }
     if (isClick) {
+      // click to clock
       let callback: CustomDialogCallback = { confirmCallback: (taskTemp: TaskInfo) => {
         this.onConfirm(taskTemp)
       }, cancelCallback: () => {
       } };
       this.broadCast.emit(BroadCastType.SHOW_TASK_DETAIL_DIALOG, [item, callback]);
+    } else {
+      // edit task
+      let editTaskStr: string = JSON.stringify(TaskMapById[item.taskID - 1]);
+      let editTask: ITaskItem = JSON.parse(editTaskStr);
+      editTask.targetValue = item?.targetValue;
+      editTask.isAlarm = item.isAlarm;
+      editTask.startTime = item.startTime;
+      editTask.frequency = item.frequency;
+      editTask.isOpen = item.isOpen;
+      router.pushUrl({ url: 'pages/TaskEditPage', params: { params: JSON.stringify(editTask) } });
     }
-  }
-
-  @Builder swipeEndBuilder(item: TaskInfo) {
-    Row() {
-      Row() {
-        Text('设置')
-          .fontSize(14)
-          .fontColor(Color.White)
-      }
-      .width(56)
-      .height('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor($r('app.color.blueColor'))
-      .onClick(() => {
-        let editTaskStr: string = JSON.stringify(TaskMapById[item.taskID - 1]);
-        let editTask: ITaskItem = JSON.parse(editTaskStr);
-        editTask.targetValue = item.targetValue;
-        editTask.isAlarm = item.isAlarm;
-        editTask.startTime = item.startTime;
-        editTask.frequency = item.frequency;
-        editTask.isOpen = item.isOpen;
-        router.pushUrl({ url: 'pages/TaskEditPage', params: { params: JSON.stringify(editTask) } });
-      })
-
-      Row() {
-        Text('删除')
-          .fontSize(14)
-          .fontColor(Color.White)
-      }
-      .width(56)
-      .height('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor($r('app.color.primaryRed'))
-      .onClick(() => {
-        this.deleteTask(item);
-      })
-    }
-    .height('100%')
-  }
-
-  deleteTask(item: TaskInfo) {
-    let dateStr = item.date || dateToStr(new Date());
-    let deleteInfo = new TaskInfo(item.id, dateStr, item.taskID, item.targetValue,
-      item.isAlarm, item.startTime, item.endTime, item.frequency, item.isDone,
-      item.finValue, false);
-    TaskInfoTableApi.deleteDataByID(deleteInfo, (res: number) => {
-      Logger.info('deleteTask', 'Delete result: ' + res);
-      this.homeStore.dateArr = this.homeStore.dateArr.map((weekItem) => {
-        if (weekItem.dateStr === dateStr) {
-          weekItem.taskList = weekItem.taskList.filter((taskItem: TaskInfo) => taskItem.taskID !== item.taskID);
-          if (this.homeStore.checkCurrentDay()) {
-            this.homeStore.selectedDayInfo = weekItem;
-          }
-          return weekItem;
-        }
-        return weekItem;
-      }).slice(0);
-    });
   }
 
   //confirm clockL
@@ -185,30 +136,154 @@ export default struct HomeIndex {
     }
   }
 
+
+  getMonthProgressImg(item: WeekDateModel): Resource {
+    let finNum = item.dayInfo?.finTaskNum || 0;
+    let targetNum = item.dayInfo?.targetTaskNum || 0;
+    if (finNum === 0) {
+      return $r('app.media.ic_home_undone');
+    }
+    if (targetNum > 0 && finNum === targetNum) {
+      return $r('app.media.ic_home_all_done');
+    }
+    return $r('app.media.ic_home_half_done');
+  }
+
+  @Builder
+  MonthDayItem(item: WeekDateModel) {
+    if (item.dateStr === '') {
+      Column() {}
+        .width(`${MONTH_DAY_WIDTH}%`)
+        .height($r('app.float.default_48'))
+    } else {
+      Column({ space: Const.DEFAULT_2 }) {
+        Text(item.weekTitle)
+          .fontSize($r('app.float.default_12'))
+          .fontWeight(Const.FONT_WEIGHT_500)
+          .fontColor(sameDate(item.date, this.homeStore.showDate) ?
+            $r('app.color.blueColor') : $r('app.color.titleColor'))
+          .opacity(Const.OPACITY_6)
+        Image(this.getMonthProgressImg(item))
+          .width($r('app.float.default_24'))
+          .height($r('app.float.default_24'))
+          .objectFit(ImageFit.Contain)
+      }
+      .width(`${MONTH_DAY_WIDTH}%`)
+      .height($r('app.float.default_56'))
+      .justifyContent(FlexAlign.Center)
+    }
+  }
+
+  @Builder
+  MonthSwitchIcon(isNext: boolean) {
+    Row() {
+      Image($r('app.media.ic_right_grey'))
+        .width($r('app.float.default_6'))
+        .height($r('app.float.default_12'))
+        .objectFit(ImageFit.Contain)
+    }
+    .width(Const.DEFAULT_32)
+    .height($r('app.float.default_56'))
+    .justifyContent(FlexAlign.Center)
+    .rotate({ z: 1, angle: isNext ? 0 : Const.DEFAULT_180 })
+    .opacity(isNext ? (this.homeStore.canGoNextMonth() ? 1 : Const.OPACITY_4) :
+      (this.homeStore.canGoPreviousMonth() ? 1 : Const.OPACITY_4))
+    .onClick(() => {
+      if (isNext) {
+        this.homeStore.changeMonth(1);
+      } else {
+        this.homeStore.changeMonth(-1);
+      }
+    })
+  }
+
+  @Builder
+  MonthCalendarOverlay() {
+    Column() {
+      Row() {
+        Row() {
+          Text($r('app.string.cancel'))
+            .fontSize($r('app.float.default_16'))
+            .fontColor($r('app.color.blueColor'))
+            .fontWeight(Const.FONT_WEIGHT_500)
+            .height($r('app.float.default_56'))
+            .padding({ left: Const.DEFAULT_24, right: Const.DEFAULT_24 })
+        }
+        .width($r('app.float.default_100'))
+        .height($r('app.float.default_56'))
+        .justifyContent(FlexAlign.Start)
+        .onClick(() => {
+          this.homeStore.closeMonthView();
+        })
+
+        Row() {
+          this.MonthSwitchIcon(false)
+          Text(this.homeStore.monthTitle)
+            .fontSize($r('app.float.default_18'))
+            .fontWeight(Const.FONT_WEIGHT_500)
+            .fontColor($r('app.color.titleColor'))
+            .margin({ left: Const.DEFAULT_12, right: Const.DEFAULT_12 })
+          this.MonthSwitchIcon(true)
+        }
+        .layoutWeight(1)
+        .height($r('app.float.default_56'))
+        .justifyContent(FlexAlign.Center)
+
+        Blank()
+          .width($r('app.float.default_100'))
+      }
+      .width(Const.THOUSANDTH_1000)
+      .height($r('app.float.default_56'))
+      .backgroundColor($r('app.color.white'))
+
+      Column() {
+        Row() {
+          ForEach(MONTH_WEEK_TITLES, (item: string) => {
+            Text(item)
+              .width(`${MONTH_DAY_WIDTH}%`)
+              .fontSize($r('app.float.default_14'))
+              .fontColor($r('app.color.titleColor'))
+              .opacity(Const.OPACITY_6)
+              .textAlign(TextAlign.Center)
+          }, (item: string) => item)
+        }
+        .width(Const.THOUSANDTH_1000)
+        .height($r('app.float.default_36'))
+
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(this.homeStore.monthDateArr, (item: WeekDateModel) => {
+            this.MonthDayItem(item)
+          }, (item: WeekDateModel) => `${item.dateStr}${item.weekTitle}`)
+        }
+        .width(Const.THOUSANDTH_1000)
+      }
+      .width(Const.THOUSANDTH_1000)
+      .backgroundColor($r('app.color.white'))
+      .borderRadius($r('app.float.default_24'))
+      .padding({ top: Const.DEFAULT_16, bottom: Const.DEFAULT_16, left: Const.DEFAULT_8, right: Const.DEFAULT_8 })
+      .margin({ top: Const.DEFAULT_16, left: Const.DEFAULT_16, right: Const.DEFAULT_16 })
+    }
+    .width(Const.THOUSANDTH_1000)
+    .height(Const.THOUSANDTH_1000)
+    .backgroundColor($r('app.color.primaryBgColor'))
+    .zIndex(10)
+  }
+
   build() {
     Stack() {
       Scroll(this.scroller) {
         Column() {
-          HomeTopView({ homeStore: $homeStore })
+          HomeTopView({ homeStore: this.homeStore })
           Text($r('app.string.task_list')).titleTextStyle()
           if (this.homeStore.getTaskListOfDay().length > 0) {
-            List({ space: Const.DEFAULT_8 }) {
+            Column({ space: Const.DEFAULT_8 }) {
               ForEach(this.homeStore.getTaskListOfDay(), (item: TaskInfo) => {
-                ListItem() {
-                  TaskCard({
-                    taskInfoStr: JSON.stringify(item),
-                    clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
-                  })
-                }
-                .height($r('app.float.default_88'))
-                .swipeAction({
-                  end: {
-                    builder: () => {
-                      this.swipeEndBuilder(item);
-                    },
-                    actionAreaDistance: 112
-                  }
+                TaskCard({
+                  taskInfoStr: JSON.stringify(item),
+                  clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
                 })
+                  .margin({ bottom: Const.DEFAULT_12 })
+                  .height($r('app.float.default_88'))
               }, (item: TaskInfo) => JSON.stringify(item))
             }
             .onAppear(() => {
@@ -242,9 +317,6 @@ export default struct HomeIndex {
       AddBtn({ clickAction: () => {
         this.editTaskAction()
       } })
-
-      AiFloatBtn()
-
       Row() {
         Text($r('app.string.EntryAbility_label'))
           .titleTextStyle()
@@ -254,7 +326,7 @@ export default struct HomeIndex {
       .width(Const.THOUSANDTH_1000)
       .height(Const.DEFAULT_56)
       .position({ x: 0, y: 0 })
-      .backgroundColor('rgba(' + WHITE_COLOR_0X + ',' + WHITE_COLOR_0X + ',' + WHITE_COLOR_0X + ',' + this.naviAlpha + ')')
+      .backgroundColor(`rgba(${WHITE_COLOR_0X},${WHITE_COLOR_0X},${WHITE_COLOR_0X},${this.naviAlpha})`)
 
       CustomDialogView()
 
@@ -287,6 +359,10 @@ export default struct HomeIndex {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .hitTestBehavior(HitTestMode.Transparent)
+      }
+
+      if (this.homeStore.showMonthView) {
+        this.MonthCalendarOverlay()
       }
     }
     .allSize()
