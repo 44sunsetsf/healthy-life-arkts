@@ -16,7 +16,7 @@
 import prompt from '@system.prompt';
 import { ITaskItem } from '../../model/TaskInitList';
 import { frequencyRange } from '../../common/utils/Utils';
-import { returnTimeStamp, createAppleRange, createDrinkRange, createTimesRange, formatTime } from '../../viewmodel/TaskViewModel';
+import { returnTimeStamp, createAppleRange, createDrinkRange, createTimesRange, createRunRange, formatTime } from '../../viewmodel/TaskViewModel';
 import { taskType } from '../../viewmodel/TaskInfo';
 import { CommonConstants as Const } from '../..//common/constants/CommonConstants';
 import { FrequencyContentType } from '../../model/TaskInitList';
@@ -28,6 +28,7 @@ export struct TargetSettingDialog {
   drinkRange: string[] = createDrinkRange();
   appleRange: string[] = createAppleRange();
   timesRange: string[] = createTimesRange();
+  runRange: string[] = createRunRange();
   currentValue: string = this.settingParams.targetValue;
   currentTime: string = Const.DEFAULT_TIME;
 
@@ -84,6 +85,13 @@ export struct TargetSettingDialog {
           })
       } else if (this.settingParams?.taskID === taskType.drinkWater) {
         TextPicker({ range: this.drinkRange })
+          .width(Const.THOUSANDTH_900,)
+          .height(Const.THOUSANDTH_800,)
+          .onChange((value) => {
+            this.currentValue =  (value as string)?.split(' ')[0];
+          })
+      } else if (this.settingParams?.taskID === taskType.run) {
+        TextPicker({ range: this.runRange })
           .width(Const.THOUSANDTH_900,)
           .height(Const.THOUSANDTH_800,)
           .onChange((value) => {

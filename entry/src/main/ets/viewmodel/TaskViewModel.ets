@@ -120,6 +120,17 @@ const isHasNotificationId = (notificationId: number) => {
   });
 }
 
+const saveTaskInfo = (taskInfo: TaskInfo, callback: Function) => {
+  TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
+    if (flag) {
+      callback(flag);
+      return;
+    }
+    TaskInfoApi.insertData(taskInfo, (insertFlag: number) => {
+      callback(insertFlag);
+    });
+  });
+}
 /**
  * @param params:TaskInfo
  */
@@ -141,7 +152,7 @@ export const addTask = (params: TaskInfo, context: Context) => {
     } else {
       useCancelReminder(params.taskID, context);
     }
-    TaskInfoApi.updateDataByDate(params, (flag: number) => {
+    saveTaskInfo(params, (flag: number) => {
       if (!flag) {
         Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
         reject(flag);
@@ -152,7 +163,7 @@ export const addTask = (params: TaskInfo, context: Context) => {
     let taskInfo: TaskInfo = JSON.parse(taskInfoStr);
     taskInfo.date = new Date().toDateString();
     taskInfo.isDone = false;
-    TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
+    saveTaskInfo(taskInfo, (flag: number) => {
       if (!flag) {
         Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
         reject(flag);
@@ -262,4 +273,11 @@ export const createTimesRange = () => {
     timesRangeArr.push(`${i} 次`);
   }
   return timesRangeArr;
+}
+export const createRunRange = () => {
+  const runRangeArr: Array<string> = [];
+  for (let i = 1; i <= Const.RUN_MAX_RANGE; i++) {
+    runRangeArr.push(`${i} km`);
+  }
+  return runRangeArr;
 }

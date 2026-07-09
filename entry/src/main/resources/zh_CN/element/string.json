@@ -29,6 +29,10 @@
       "value": "用于发布/取消任务提醒"
     },
     {
+      "name": "task_run",
+      "value": "跑步一公里"
+    },
+    {
       "name": "empty",
       "value": "empty"
     }
