@@ -51,10 +51,11 @@ export struct WeekCalendar {
 
   getProgressImg(item: WeekDateModel): Resource {
     let finNum = item.dayInfo?.finTaskNum || 0;
+    let targetNum = item.dayInfo?.targetTaskNum || 0;
     if (finNum === 0) {
       return $r('app.media.ic_home_undone');
     }
-    if (finNum === (item.dayInfo?.targetTaskNum || 0)) {
+    if (targetNum > 0 && finNum === targetNum) {
       return $r('app.media.ic_home_all_done');
     }
     return $r('app.media.ic_home_half_done');
@@ -87,6 +88,25 @@ export struct WeekCalendar {
   refreshSelectedWeek(dateTime: number) {
     this.homeStore.setSelectedShowDate(dateTime);
     this.isPageScroll = this.scrollToWeekByDate(dateTime);
+  }
+
+  private getWeekStartDateStr(dateTime: number): string {
+    let date: Date = new Date(dateTime);
+    let currentDay: number = date.getDay() - 1;
+    if (date.getDay() === 0) {
+      currentDay = 6;
+    }
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - currentDay);
+    return dateToStr(date);
+  }
+
+  private isShowingTodayWeek(): boolean {
+    return this.getWeekStartDateStr(this.homeStore.showDate) === this.getWeekStartDateStr(new Date().getTime());
+  }
+
+  private backToToday() {
+    this.refreshSelectedWeek(new Date().getTime());
   }
 
   changeWeek(offset: number) {
@@ -134,6 +154,32 @@ export struct WeekCalendar {
   }
 
   @Builder
+  TodayButton() {
+    Row() {
+      if (!this.isShowingTodayWeek()) {
+        Text('今')
+          .fontSize($r('app.float.default_14'))
+          .fontWeight(Const.FONT_WEIGHT_500)
+          .fontColor($r('app.color.blueColor'))
+          .textAlign(TextAlign.Center)
+          .width($r('app.float.default_28'))
+          .height($r('app.float.default_24'))
+          .borderRadius($r('app.float.default_12'))
+          .backgroundColor($r('app.color.white'))
+          .border({ width: $r('app.float.default_1'), color: $r('app.color.blueColor') })
+      }
+    }
+    .width($r('app.float.default_44'))
+    .height($r('app.float.default_24'))
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      if (!this.isShowingTodayWeek()) {
+        this.backToToday();
+      }
+    })
+  }
+
+  @Builder
   MonthIcon() {
     Row() {
       Image($r('app.media.ic_calendar_month'))
@@ -153,8 +199,7 @@ export struct WeekCalendar {
     Row() {
       Column() {
         Row() {
-          Blank()
-            .width($r('app.float.default_44'))
+          this.TodayButton()
           Row() {
             this.ArrowIcon(false)
             HealthText({ title: this.homeStore.dateTitle, fontSize: $r('app.float.default_14') })
