@@ -16,6 +16,7 @@
 import router from '@ohos.router';
 import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
+import { AiFloatBtn } from '../ai/view/AiFloatBtn';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
@@ -241,6 +242,9 @@ export default struct HomeIndex {
       AddBtn({ clickAction: () => {
         this.editTaskAction()
       } })
+
+      AiFloatBtn()
+
       Row() {
         Text($r('app.string.EntryAbility_label'))
           .titleTextStyle()

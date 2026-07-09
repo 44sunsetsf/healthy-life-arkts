@@ -45,6 +45,9 @@ struct Index {
   private tabController: TabsController = new TabsController();
 
   aboutToAppear() {
+    GlobalContext.getContext().setObject('switchToAiTab', () => {
+      this.tabController.changeIndex(TabId.AI);
+    });
     notificationManager.requestEnableNotification().then(() => {
       Logger.info('onPageShow', `requestEnableNotification success`);
     }).catch((err: Error) => {
