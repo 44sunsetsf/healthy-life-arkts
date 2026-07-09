@@ -142,6 +142,7 @@ export default struct HomeIndex {
       this.homeStore.dateArr = this.homeStore.dateArr.map((weekItem) => {
         if (weekItem.dateStr === dateStr) {
           weekItem.taskList = weekItem.taskList.filter((taskItem: TaskInfo) => taskItem.taskID !== item.taskID);
+          weekItem.dayInfo = this.homeStore.refreshDayInfoByTaskList(dateStr, weekItem.taskList);
           if (this.homeStore.checkCurrentDay()) {
             this.homeStore.selectedDayInfo = weekItem;
           }

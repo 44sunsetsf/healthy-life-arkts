@@ -5,18 +5,18 @@
 	"BuildOptions":{
 		"SELECT_BUILD_TARGET":"default",
 		"BUILD_PATH":{
-			"OUTPUT_METADATA_JSON":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\hap_metadata\\default\\output_metadata.json",
-			"OUTPUT_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\outputs\\default",
-			"RES_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\res\\default",
-			"ETS_SUPER_VISUAL_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\cache\\default\\default@CompileArkTS\\esmodule",
-			"JS_ASSETS_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\loader_out\\default",
-			"SOURCE_MAP_DIR":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\source_map\\default",
-			"INTERMEDIA_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates",
-			"RES_PROFILE_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\res\\default\\resources\\base\\profile",
-			"WORKER_LOADER":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\loader\\default\\loader.json",
-			"MANIFEST_JSON":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\manifest\\default",
-			"JS_LITE_ASSETS_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\intermediates\\loader_out_lite\\default",
-			"JS_SUPER_VISUAL_PATH":"D:\\healthy_project_new\\healthy-life-arkts-main\\entry\\build\\default\\cache\\default\\default@CompileJS\\jsbundle"
+			"OUTPUT_METADATA_JSON":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\hap_metadata\\default\\output_metadata.json",
+			"OUTPUT_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\outputs\\default",
+			"RES_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\res\\default",
+			"ETS_SUPER_VISUAL_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\cache\\default\\default@CompileArkTS\\esmodule",
+			"JS_ASSETS_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\loader_out\\default",
+			"SOURCE_MAP_DIR":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\source_map\\default",
+			"INTERMEDIA_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates",
+			"RES_PROFILE_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\res\\default\\resources\\base\\profile",
+			"WORKER_LOADER":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\loader\\default\\loader.json",
+			"MANIFEST_JSON":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\manifest\\default",
+			"JS_LITE_ASSETS_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\intermediates\\loader_out_lite\\default",
+			"JS_SUPER_VISUAL_PATH":"D:\\a_final_healthy_project\\healthy-life-arkts\\entry\\build\\default\\cache\\default\\default@CompileJS\\jsbundle"
 		}
 	}
 }

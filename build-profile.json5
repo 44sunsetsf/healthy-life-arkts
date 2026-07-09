@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\86156\\.ohos\\config\\default_healthy-life-arkts_n5DuoM506Jk-8xu-gTGqNr4uLs2HVBVpr0USCAmfSw8=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001A11DEAC4E6D82D24A35C7CDBAAC91B7B606A330F33F7BCC930266495F73BDDA1D4EDDEF665A9A",
+          "profile": "C:\\Users\\86156\\.ohos\\config\\default_healthy-life-arkts_n5DuoM506Jk-8xu-gTGqNr4uLs2HVBVpr0USCAmfSw8=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\86156\\.ohos\\config\\default_healthy-life-arkts_n5DuoM506Jk-8xu-gTGqNr4uLs2HVBVpr0USCAmfSw8=.p12",
+          "storePassword": "0000001AD1680B5EB4A68A0A41F7E6AFB258A5838BD27488D9B86C25276DDEC801B799658C5DE3933E7C"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

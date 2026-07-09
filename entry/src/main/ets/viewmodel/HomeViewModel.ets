@@ -175,6 +175,51 @@ export class HomeStore {
     this.updateMonthData(nextMonthDate, () => {});
   }
 
+  private calDayInfoByTaskList(dateStr: string, taskList: TaskInfo[]): DayInfo {
+    let targetTaskNum: number = 0;
+    let finTaskNum: number = 0;
+    taskList.forEach((taskItem: TaskInfo) => {
+      if (taskItem.isOpen) {
+        targetTaskNum++;
+        if (taskItem.isDone) {
+          finTaskNum++;
+        }
+      }
+    });
+    return new DayInfo(dateStr, targetTaskNum, finTaskNum);
+  }
+
+  private saveDayInfo(dayInfo: DayInfo, callback: Function) {
+    DayInfoApi.updateData(dayInfo, (res: number) => {
+      if (res) {
+        callback(res);
+        return;
+      }
+      DayInfoApi.insertData(dayInfo, (insertRes: number) => {
+        callback(insertRes);
+      });
+    });
+  }
+
+  private syncMonthDayInfo(dateStr: string, dayInfo: DayInfo) {
+    if (!this.showMonthView) {
+      return;
+    }
+    this.monthDateArr = this.monthDateArr.map((item: WeekDateModel) => {
+      if (item.dateStr === dateStr) {
+        item.dayInfo = dayInfo;
+      }
+      return item;
+    }).slice(0);
+  }
+
+  public refreshDayInfoByTaskList(dateStr: string, taskList: TaskInfo[]): DayInfo {
+    let dayInfo: DayInfo = this.calDayInfoByTaskList(dateStr, taskList);
+    this.saveDayInfo(dayInfo, () => {});
+    this.syncMonthDayInfo(dateStr, dayInfo);
+    return dayInfo;
+  }
+
   // check is current day
   public checkCurrentDay(): boolean {
     return dateToStr(new Date()) === this.selectedDayInfo?.dateStr;
@@ -220,33 +265,18 @@ export class HomeStore {
         if (task.date === item.dateStr) {
           Logger.info('item', JSON.stringify(item));
           let taskList: TaskInfo[] = item.taskList;
-          const dayInfo: DayInfo = item.dayInfo;
           if (editedTaskInfo.isOpen) {
-            // add task
+            // add task. Recalculate today's badge progress by currently open tasks.
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
-            let count: number = 0;
-            taskList.forEach((taskItem: TaskInfo) => {
-              if (taskItem.isDone) {
-                count++;
-              }
-            });
-            if (count > dayInfo.finTaskNum) {
-              dayInfo.finTaskNum = count;
-            }
           } else {
-            // delete task
+            // delete task. Recalculate today's badge progress by remaining open tasks.
             let taskIndex = taskList.findIndex((taskItem) => taskItem.taskID === taskID);
             Logger.info('taskList[taskIndex]', JSON.stringify(taskList[taskIndex]));
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
           }
-          dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
-          if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
-            dayInfo.finTaskNum = dayInfo.targetTaskNum;
-          }
-          DayInfoApi.updateData(dayInfo, () => {
-          });
+          let dayInfo: DayInfo = this.refreshDayInfoByTaskList(item.dateStr, taskList);
           Logger.debug("tempDayInfo", JSON.stringify(dayInfo));
           let weekDateModelStr = JSON.stringify(item);
           let currentDayInfo: WeekDateModel = JSON.parse(weekDateModelStr);
@@ -279,8 +309,8 @@ export class HomeStore {
   public getDonePercent(): string {
     let dayInfo = this.selectedDayInfo?.dayInfo;
     Logger.debug("dayInfo", JSON.stringify(dayInfo));
-    if (dayInfo && (dayInfo?.finTaskNum || 0) > 0) {
-      if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
+    if (dayInfo && (dayInfo?.targetTaskNum || 0) > 0 && (dayInfo?.finTaskNum || 0) > 0) {
+      if (dayInfo.finTaskNum >= dayInfo.targetTaskNum) {
         return `${Const.DEFAULT_100}`;
       }
       return `${Math.ceil(dayInfo.finTaskNum / dayInfo.targetTaskNum * Const.DEFAULT_100)}`;
@@ -365,19 +395,19 @@ export class HomeStore {
   }
 
   updateDayInfo(): Promise<DayInfo> {
-    let dayInfo: DayInfo = this.selectedDayInfo.dayInfo;
-    dayInfo.finTaskNum += 1;
-    dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
+    let dayInfo: DayInfo = this.calDayInfoByTaskList(this.selectedDayInfo.dateStr, this.selectedDayInfo.taskList);
     return new Promise((resolve, reject) => {
-      DayInfoApi.updateData(dayInfo, (res: number) => {
+      this.saveDayInfo(dayInfo, (res: number) => {
         if (!res) {
           Logger.error('taskClock-updateDayInfo', JSON.stringify(res));
           reject(res);
+          return;
         }
         Logger.info('taskClock-updateDayInfo', JSON.stringify(dayInfo));
         // 同步界面数据
         let dayInfoStr = JSON.stringify(dayInfo);
         this.selectedDayInfo.dayInfo = JSON.parse(dayInfoStr);
+        this.syncMonthDayInfo(this.selectedDayInfo.dateStr, dayInfo);
         resolve(dayInfo);
       });
     });
