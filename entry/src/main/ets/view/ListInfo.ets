@@ -45,6 +45,8 @@ export struct ListInfo {
         .onClick(() => {
           if (item.id === '1') {
             router.pushUrl({ url: 'pages/ProfilePage' });
+          } else if (item.id === '4') {
+            router.pushUrl({ url: 'pages/RankPage' });
           }
         })
 

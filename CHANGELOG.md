@@ -918,3 +918,41 @@ onConfirm(task: TaskInfo) {
 if (this.showExpPopup) { ExpGainPopup(...) }
 if (this.showLevelUpPopup) { LevelUpPopup(...) }
 ```
+
+### 17. 好友数据持久化 + 登录功能
+
+**功能描述**：好友数据从写死改为数据库存储，新增登录页面，初始密码全为 123123。
+
+**新增文件**:
+- `entry/src/main/ets/viewmodel/FriendInfo.ets` — 好友数据模型（id/nickname/password/experience/isMe）
+- `entry/src/main/ets/common/database/tables/FriendInfoApi.ets` — 好友表 CRUD + login/queryMe/queryAll
+- `entry/src/main/ets/pages/LoginPage.ets` — 登录页面，输入昵称+密码验证后进入主页
+
+**修改文件**:
+- `RdbColumnModel.ets` — 新增 `columnFriendInfoList`
+- `CommonConstants.ets` — 新增 `FRIEND_INFO` 常量
+- `EntryAbility.ets` — 建表 + `initFriendData()` 初始化6条记录（5好友+1自己，密码均为123123）
+- `RankPage.ets` — 从 `FriendInfoApi.queryAll()` 读取数据，移除硬编码
+- `AdvertisingPage.ets` — 跳转目标从 MainPage 改为 LoginPage
+- `HomeViewModel.ets` — 打卡增加经验时同步更新 friendInfo 表中"我"的经验值
+- `main_pages.json` — 注册 LoginPage
+
+### 18. 账号昵称分离 + 登录持久化
+
+**功能描述**：
+- FriendInfo 新增 `username` 字段，与 `nickname` 分离。账号(username)只能包含字母数字下划线，用于登录；昵称(nickname)用于显示
+- 登录成功后用 `preferences` 存储登录状态，下次进入应用自动跳过登录页
+- 退出登录清除登录状态
+- 我的页面优先从当前登录用户读取昵称
+
+**初始账号数据**：
+| username | nickname | 密码 |
+|---|---|---|
+| xiaoming | 小明 | 123123 |
+| xiaohong | 小红 | 123123 |
+| xiaogang | 小刚 | 123123 |
+| xiaomei | 小美 | 123123 |
+| xiaoqiang | 小强 | 123123 |
+| xxa | xxa | 123123 |
+
+**修改文件**: FriendInfo.ets, RdbColumnModel.ets, CommonConstants.ets, FriendInfoApi.ets, LoginPage.ets, AdvertisingPage.ets, EntryAbility.ets, MinePage.ets
