@@ -118,12 +118,19 @@ export struct OpenRemindItem {
 export struct RemindTimeItem {
   @Consume settingParams: ITaskItem;
 
+  getDisplayTimes(): string {
+    if (!this.settingParams?.startTime || this.settingParams.startTime === '') {
+      return Const.DEFAULT_TIME;
+    }
+    return this.settingParams.startTime.split(',').map(t => t.trim()).join(' / ');
+  }
+
   build() {
     Row() {
       Text($r('app.string.remind_time')).fontSize(Const.DEFAULT_20).fontWeight(FontWeight.Medium)
       Blank()
         .layoutWeight(1)
-      Text(this.settingParams?.startTime)
+      Text(this.getDisplayTimes())
         .targetSetCommon()
         .remindTimeStyle(this.settingParams?.isOpen, this.settingParams?.isAlarm)
       Image($r('app.media.ic_right_grey')).width(Const.DEFAULT_8).height(Const.DEFAULT_16)

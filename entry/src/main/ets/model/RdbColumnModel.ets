@@ -20,8 +20,7 @@ export const columnGlobalInfoList: Array<ColumnInfo> = [
   new ColumnInfo('firstDate', 'text', -1, false, false, false),
   new ColumnInfo('lastDate', 'text', -1, false, false, false),
   new ColumnInfo('checkInDays', 'integer', -1, true, false, false),
-  new ColumnInfo('achievements', 'text', -1, false, false, false),
-  new ColumnInfo('experience', 'integer', -1, false, false, false)
+  new ColumnInfo('achievements', 'text', -1, false, false, false)
 ];
 
 export const columnDayInfoList: Array<ColumnInfo> = [

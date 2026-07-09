@@ -26,7 +26,7 @@ export class CommonConstants {
   /** global info table */
   static readonly GLOBAL_INFO = {
     tableName: 'globalInfo',
-    columns: ['id', 'firstDate', 'lastDate', 'checkInDays', 'achievements', 'experience']
+    columns: ['id', 'firstDate', 'lastDate', 'checkInDays', 'achievements']
   } as CommonConstantsInfo
 
   /** task info table */
@@ -61,6 +61,9 @@ export class CommonConstants {
 
   // TaskNum
   static readonly TASK_NUM = 6;
+
+  // Progress total count (for progress bar calculation)
+  static readonly PROGRESS_TOTAL: number = 7;
 
   // THOUSANDTH
   static readonly THOUSANDTH_15: string = '1.5%'; // ‘1.5%’
@@ -240,6 +243,10 @@ export class CommonConstants {
   static readonly DRINK_MAX_RANGE: number = 500;
 
   static readonly TIMES_50: number = 50;
+
+  static readonly NOTIFICATION_ID_MULTIPLIER: number = 100;
+
+  static readonly TIMES_MAX_RANGE: number = 3;
 
   static readonly TIMES_100: number = 100;
 
