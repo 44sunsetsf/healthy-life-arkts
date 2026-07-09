@@ -20,7 +20,7 @@ export struct TitleBar {
     Row() {
       Text($r('app.string.achievement'))
         .fontSize($r('app.float.default_24'))
-        .fontColor($r('app.color.white'))
+        .fontColor($r('app.color.titleColor'))
         .align(Alignment.Start)
         .padding({left: Const.ACHIEVE_TITLE_BAR_LEFT,top: Const.ACHIEVE_TITLE_BAR_TOP})
     }
