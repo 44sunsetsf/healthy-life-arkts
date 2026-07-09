@@ -88,7 +88,7 @@ struct TaskBaseInfo {
 struct TaskClock {
   confirm: Function = () => {};
   cancel: Function = () => {};
-  isDone: boolean = false;
+  @State isDone: boolean = false;
 
   build() {
     Column({ space: Const.DEFAULT_12 }) {
@@ -117,6 +117,7 @@ struct TaskClock {
         .backgroundColor('rgba(255,255,255,0.40)')
         .onClick(() => {
           GlobalContext.getContext().setObject('taskListChange', true);
+          this.isDone = true;
           this.confirm();
         })
       }

@@ -47,11 +47,16 @@ export default class EntryAbility extends UIAbility {
       Logger.error(`RdbHelper dayInfo err : ${JSON.stringify(err)}`);
     });
 
-    RdbUtils.createTable(Const.GLOBAL_INFO.tableName ? Const.GLOBAL_INFO.tableName : '', columnGlobalInfoList).then(() => {
-      Logger.info(`RdbHelper createTable globalInfo success`);
-    }).catch((err: Error) => {
-      Logger.error(`RdbHelper globalInfo err : ${JSON.stringify(err)}`);
-    });
+    await RdbUtils.createTable(Const.GLOBAL_INFO.tableName ? Const.GLOBAL_INFO.tableName : '', columnGlobalInfoList)
+      .then(() => {
+        Logger.info(`RdbHelper createTable globalInfo success`);
+      }).catch((err: Error) => {
+        Logger.error(`RdbHelper globalInfo err : ${JSON.stringify(err)}`);
+      });
+    await RdbUtils.addTableColumn(Const.GLOBAL_INFO.tableName ? Const.GLOBAL_INFO.tableName : '',
+      new ColumnInfo('experience', 'integer', -1, false, false, false)).then(() => {
+      Logger.info(`RdbHelper addColumn experience success`);
+    }).catch(() => {});
     RdbUtils.createTable(Const.TASK_INFO.tableName ? Const.TASK_INFO.tableName : '', columnTaskInfoInfoList).then(() => {
       Logger.info(`RdbHelper createTable taskInfo success`);
     }).catch((err: Error) => {
