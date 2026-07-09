@@ -705,3 +705,216 @@ if (this.isDone) {
     ...
 }
 ```
+
+---
+
+### 12. 经验值系统
+
+**功能描述**：打卡任务后获得20经验值，每100经验值升一级。我的页面动态显示等级和经验值，新增排名导航栏展示好友排名。
+
+**文件**: `entry/src/main/ets/viewmodel/GlobalInfo.ets` — 新增 `experience` 字段
+
+**文件**: `entry/src/main/ets/common/constants/CommonConstants.ets` — `GLOBAL_INFO.columns` 新增 `'experience'`
+
+**文件**: `entry/src/main/ets/model/RdbColumnModel.ets` — `columnGlobalInfoList` 新增 `experience` 列
+
+**文件**: `entry/src/main/ets/common/database/tables/GlobalInfoApi.ets` — query 和 generateBucket 新增 experience 读写
+
+**文件**: `entry/src/main/ets/entryability/EntryAbility.ets` — onCreate 中 await addTableColumn('experience')
+
+**文件**: `entry/src/main/ets/viewmodel/HomeViewModel.ets`
+
+```typescript
+// 新增常量和方法
+static readonly EXP_PER_CLOCK: number = 20;
+static readonly EXP_PER_LEVEL: number = 100;
+
+// taskClock 中打卡完成后增加经验值
+if (taskItem.isDone) {
+  await this.addExperience(HomeStore.EXP_PER_CLOCK);
+  ...
+}
+
+// 新增方法
+addExperience(exp: number): Promise<void>
+static getLevel(experience: number): number
+static getLevelExp(experience: number): number
+```
+
+**文件**: `entry/src/main/ets/view/UserBaseInfo.ets` — 等级从固定 "LV.7" 改为动态显示，新增经验值显示和动画
+
+```typescript
+// 修改前
+Text('LV.7')
+
+// 修改后
+Text(`LV.${this.displayLevel}`)
+Row() {
+  Text(`${this.displayExp}`)
+  Text(`/${HomeStore.EXP_PER_LEVEL}经验`)
+}
+```
+
+### 13. 排名功能
+
+**功能描述**：新增底部导航"排名"Tab，展示用户与5个好友的等级排名列表（好友数据写死），按经验值降序排列。
+
+**新增文件**: `entry/src/main/ets/pages/RankPage.ets` — 排名页面，包含5个写死好友数据 + 当前用户，按经验值排序
+
+**文件**: `entry/src/main/ets/model/NavItemModel.ets` — TabId 新增 RANK，NavList 新增排名导航项
+
+**文件**: `entry/src/main/ets/pages/MainPage.ets` — 新增 RankIndex TabContent
+
+**文件**: `entry/src/main/resources/base/element/string.json` — 新增 `tab_rank` 字符串资源
+
+**文件**: `entry/src/main/resources/base/profile/main_pages.json` — 移除 `pages/RankPage`（作为 TabContent 嵌入不需要路由）
+
+---
+
+### 14. 经验值动画和排名数据刷新修复
+
+**问题描述**：打卡后经验值无动画增加，排名页数据不变。
+
+**根因**：打卡发生在 Home tab，经验值变化无法跨组件传递到 Mine tab 的 UserBaseInfo 和 Rank tab 的 RankIndex。
+
+**修复方案**：使用 `AppStorage` 跨组件共享经验值变化。
+
+**文件**: `entry/src/main/ets/viewmodel/HomeViewModel.ets` — `addExperience` 写入 `AppStorage` 存储 `experienceOld`/`experienceNew`/`experienceCurrent`
+
+```typescript
+// 新增
+AppStorage.SetOrCreate('experienceOld', oldExp);
+AppStorage.SetOrCreate('experienceNew', res.experience);
+AppStorage.SetOrCreate('experienceCurrent', res.experience);
+```
+
+**文件**: `entry/src/main/ets/view/UserBaseInfo.ets` — 用 `@StorageLink` 监听经验值变化，`onVisibleAreaChange` 时调用 `startExpAnimation` 触发递增动画
+
+**文件**: `entry/src/main/ets/pages/RankPage.ets` — 用 `@StorageLink('experienceCurrent') @Watch('onExpChange')` 监听变化自动刷新排名数据
+
+---
+
+### 15. 经验值动画起点修正 + 打卡按钮响应式修复
+
+**问题描述**：
+1. 首次打卡时经验值动画从0跳起，而非从当前经验值开始递增
+2. `TaskClock.isDone` 为普通属性（非响应式），打卡后对话框内按钮不会从"打卡"变为"已完成"
+3. 经验值动画完全不触发（核心问题）
+
+**根因**：
+1. `loadExpInfo` 初始化时只设置了 `experienceCurrent`，未设置 `experienceOld`，导致首次打卡时 `experienceOld` 为默认值 0
+2. `TaskClock` 的 `isDone` 是 `boolean` 类型普通属性，不是 `@State` 或 `@Prop`，值变化不会触发 UI 重新渲染
+3. **动画仅依赖 `onVisibleAreaChange` 触发**，但打卡时用户在 Home Tab，Mine Tab 不可见，`onVisibleAreaChange` 不会触发。且 Tabs 懒加载时非当前 Tab 组件可能未创建，`@StorageLink` 未绑定，`AppStorage` 写入后无人监听
+
+**修复方案**：使用 `@Watch` 监听 `experienceNew` 变化直接启动动画，不再仅依赖 `onVisibleAreaChange`
+
+**文件**: `entry/src/main/ets/view/UserBaseInfo.ets`
+
+```typescript
+// 修改前
+@StorageLink('experienceNew') experienceNew: number = 0;
+// 动画仅在 onVisibleAreaChange 中触发
+
+// 修改后
+@StorageLink('experienceNew') @Watch('onExpNewChange') experienceNew: number = 0;
+
+onExpNewChange() {
+  if (this.experienceNew > 0 && this.lastAnimatedNew !== this.experienceNew) {
+    this.lastAnimatedNew = this.experienceNew;
+    this.startExpAnimation(this.experienceOld, this.experienceNew);
+  }
+}
+
+// loadExpInfo 中也增加动画触发逻辑（处理 Tab 懒加载首次创建场景）
+loadExpInfo() {
+  GlobalInfoApi.query((result: GlobalInfo) => {
+    if (result) {
+      if (this.experienceNew > 0 && this.lastAnimatedNew !== this.experienceNew) {
+        this.lastAnimatedNew = this.experienceNew;
+        this.startExpAnimation(this.experienceOld, this.experienceNew);
+      } else {
+        this.displayLevel = HomeStore.getLevel(result.experience);
+        this.displayExp = HomeStore.getLevelExp(result.experience);
+        if (this.experienceNew === 0) {
+          this.experienceOld = result.experience;
+          this.experienceCurrent = result.experience;
+        }
+      }
+    }
+  });
+}
+```
+
+**文件**: `entry/src/main/ets/view/dialog/TaskDetailDialog.ets`
+
+```typescript
+// 修改前 — TaskClock
+isDone: boolean = false;
+.onClick(() => {
+  GlobalContext.getContext().setObject('taskListChange', true);
+  this.confirm();
+})
+
+// 修改后 — isDone 改为 @State 响应式，打卡时同步更新
+@State isDone: boolean = false;
+.onClick(() => {
+  GlobalContext.getContext().setObject('taskListChange', true);
+  this.isDone = true;
+  this.confirm();
+})
+```
+
+---
+
+## 二、新增功能（续）
+
+### 16. 打卡经验增加弹窗 + Level Up 升级动画
+
+**功能描述**：打卡成功后在当前页面（首页）立即弹出经验增加动画弹窗（显示 `+20 EXP` 数字递增），如果经验增加导致升级则紧接着弹出 Level Up 升级动画弹窗。
+
+**新增文件**: `entry/src/main/ets/view/dialog/ExpGainPopup.ets`
+
+- `ExpGainPopup` 组件：橙色圆角胶囊弹窗，从下方滑入，数字从0递增到实际获得经验值，1.8秒后淡出上移消失
+- `LevelUpPopup` 组件：金色光晕背景 + "LEVEL UP!" + "LV.X" 大字，弹簧缩放动画进入，金色光晕扩散消失，2.2秒后淡出消失
+
+**文件**: `entry/src/main/ets/viewmodel/AchievementInfo.ets`
+
+```typescript
+// 新增字段
+expGained: number = 0;
+oldLevel: number = 0;
+newLevel: number = 0;
+isLevelUp: boolean = false;
+```
+
+**文件**: `entry/src/main/ets/viewmodel/HomeViewModel.ets`
+
+```typescript
+// addExperience 返回值从 Promise<void> 改为 Promise<{expGained, oldLevel, newLevel}>
+addExperience(exp: number): Promise<{ expGained: number, oldLevel: number, newLevel: number }>
+
+// taskClock 返回的 AchievementInfo 填充 expGained/oldLevel/newLevel/isLevelUp
+```
+
+**文件**: `entry/src/main/ets/view/HomeComponent.ets`
+
+```typescript
+// 打卡成功后触发弹窗
+onConfirm(task: TaskInfo) {
+  this.homeStore.taskClock(task).then((res: AchievementInfo) => {
+    if (res.expGained > 0) {
+      this.expGained = res.expGained;
+      this.showExpPopup = true;
+    }
+    if (res.isLevelUp) {
+      this.levelUpLevel = res.newLevel;
+      setTimeout(() => { this.showLevelUpPopup = true; }, 2200);
+    }
+    // ...achievement logic
+  })
+}
+
+// build() Stack 中条件渲染弹窗（hitTestBehavior: Transparent 不拦截触摸）
+if (this.showExpPopup) { ExpGainPopup(...) }
+if (this.showLevelUpPopup) { LevelUpPopup(...) }
+```

@@ -19,4 +19,8 @@
 export default class AchievementInfo {
   achievementLevel: number = 0;
   showAchievement: boolean = false;
+  expGained: number = 0;
+  oldLevel: number = 0;
+  newLevel: number = 0;
+  isLevelUp: boolean = false;
 }

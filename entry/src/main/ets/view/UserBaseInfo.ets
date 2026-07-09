@@ -1,23 +1,61 @@
-/*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
- * Licensed under the Apache License,Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+import { HomeStore } from '../viewmodel/HomeViewModel';
+import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
+import GlobalInfo from '../viewmodel/GlobalInfo';
 
 @Component
 export struct UserBaseInfo {
   @Prop nickname: string = '';
   @Prop signature: string = '';
   @Prop avatar: string = '';
+  @State displayLevel: number = 1;
+  @State displayExp: number = 0;
+  @StorageLink('experienceOld') experienceOld: number = 0;
+  @StorageLink('experienceNew') @Watch('onExpNewChange') experienceNew: number = 0;
+  @StorageLink('experienceCurrent') experienceCurrent: number = 0;
+  private lastAnimatedNew: number = -1;
+
+  aboutToAppear() {
+    this.loadExpInfo();
+  }
+
+  onExpNewChange() {
+    if (this.experienceNew > 0 && this.lastAnimatedNew !== this.experienceNew) {
+      this.lastAnimatedNew = this.experienceNew;
+      this.startExpAnimation(this.experienceOld, this.experienceNew);
+    }
+  }
+
+  loadExpInfo() {
+    GlobalInfoApi.query((result: GlobalInfo) => {
+      if (result) {
+        if (this.experienceNew > 0 && this.lastAnimatedNew !== this.experienceNew) {
+          this.lastAnimatedNew = this.experienceNew;
+          this.startExpAnimation(this.experienceOld, this.experienceNew);
+        } else {
+          this.displayLevel = HomeStore.getLevel(result.experience);
+          this.displayExp = HomeStore.getLevelExp(result.experience);
+          if (this.experienceNew === 0) {
+            this.experienceOld = result.experience;
+            this.experienceCurrent = result.experience;
+          }
+        }
+      }
+    });
+  }
+
+  startExpAnimation(oldExp: number, newExp: number) {
+    let current = oldExp;
+    let step = 1;
+    let timer = setInterval(() => {
+      current += step;
+      if (current >= newExp) {
+        current = newExp;
+        clearInterval(timer);
+      }
+      this.displayLevel = HomeStore.getLevel(current);
+      this.displayExp = HomeStore.getLevelExp(current);
+    }, 20);
+  }
 
   build() {
     Column() {
@@ -29,7 +67,7 @@ export struct UserBaseInfo {
         .margin({ top: $r('app.float.default_71') })
 
       Column() {
-        Text('LV.7')
+        Text(`LV.${this.displayLevel}`)
           .fontSize($r('app.float.default_12'))
           .fontWeight(FontWeight.Bolder)
           .fontColor($r('app.color.leveColor'))
@@ -48,9 +86,30 @@ export struct UserBaseInfo {
         .fontWeight(FontWeight.Normal)
         .fontColor($r('app.color.black'))
 
+      Row() {
+        Text(`${this.displayExp}`)
+          .fontSize($r('app.float.default_16'))
+          .fontColor($r('app.color.signatureColor'))
+          .fontWeight(FontWeight.Bold)
+        Text(`/${HomeStore.EXP_PER_LEVEL}经验`)
+          .fontSize($r('app.float.default_14'))
+          .fontColor($r('app.color.signatureColor'))
+      }
+      .margin({ bottom: $r('app.float.default_6') })
+
       Text(this.signature || '暂无个性签名').fontSize($r('app.float.default_16')).fontWeight(FontWeight.Normal)
         .fontFamily($r('app.string.PingFangSC_Regular'))
         .fontColor($r('app.color.signatureColor'))
     }
+    .onVisibleAreaChange([0.0, 1.0], (isVisible: boolean, currentRatio: number) => {
+      if (isVisible && currentRatio > 0.0) {
+        if (this.experienceNew > 0 && this.lastAnimatedNew !== this.experienceNew) {
+          this.lastAnimatedNew = this.experienceNew;
+          this.startExpAnimation(this.experienceOld, this.experienceNew);
+        } else if (this.experienceNew === 0) {
+          this.loadExpInfo();
+        }
+      }
+    })
   }
 }

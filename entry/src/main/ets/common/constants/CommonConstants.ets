@@ -26,7 +26,7 @@ export class CommonConstants {
   /** global info table */
   static readonly GLOBAL_INFO = {
     tableName: 'globalInfo',
-    columns: ['id', 'firstDate', 'lastDate', 'checkInDays', 'achievements']
+    columns: ['id', 'firstDate', 'lastDate', 'checkInDays', 'achievements', 'experience']
   } as CommonConstantsInfo
 
   /** task info table */
