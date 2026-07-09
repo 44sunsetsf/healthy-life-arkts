@@ -28,6 +28,7 @@ import { HomeStore } from '../viewmodel/HomeViewModel';
 import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { GlobalContext } from '../common/utils/GlobalContext';
+import { AiChatPage } from '../ai/pages/AiChatPage';
 
 @Styles function allSize() {
   .width(Const.THOUSANDTH_1000)
@@ -130,6 +131,11 @@ struct Index {
         RankIndex()
       }
       .tabBar(this.TabBuilder(TabId.RANK))
+
+      TabContent() {
+        AiChatPage()
+      }
+      .tabBar(this.TabBuilder(TabId.AI))
 
       TabContent() {
         MineIndex()
