@@ -1,0 +1,20 @@
+# DevEco Studio / HarmonyOS
+/oh_modules/
+/**/oh_modules/
+/.hvigor/
+/**/.hvigor/
+/build/
+/**/build/
+/.cxx/
+/**/.preview/
+/.idea/
+local.properties
+*.hap
+*.app
+*.log
+
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
