@@ -56,7 +56,13 @@ export class CommonConstants {
   /** user info table */
   static readonly USER_INFO = {
     tableName: 'userInfo',
-    columns: ['id', 'avatar', 'nickname', 'signature', 'gender', 'birthday', 'height', 'weight']
+    columns: ['id', 'username', 'avatar', 'nickname', 'signature', 'gender', 'birthday', 'height', 'weight']
+  } as CommonConstantsInfo
+
+  /** friend info table */
+  static readonly FRIEND_INFO = {
+    tableName: 'friendInfo',
+    columns: ['id', 'username', 'nickname', 'password', 'experience', 'isMe']
   } as CommonConstantsInfo
 
   // TaskNum

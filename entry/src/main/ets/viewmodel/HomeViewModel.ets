@@ -27,7 +27,10 @@ import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import Logger from '../common/utils/Logger';
 import GlobalInfo from './GlobalInfo';
 import WeekCalendarInfo from './WeekCalendarInfo';
+import FriendInfoApi from '../common/database/tables/FriendInfoApi';
+import FriendInfo from './FriendInfo';
 import AchievementInfo from './AchievementInfo';
+import { GlobalContext } from '../common/utils/GlobalContext';
 
 export class ExpResult {
   expGained: number = 0;
@@ -353,7 +356,18 @@ export class HomeStore {
             result.expGained = exp;
             result.oldLevel = oldLevel;
             result.newLevel = newLevel;
-            resolve(result);
+            let currentUser = GlobalContext.getContext().getObject('currentUser') as FriendInfo;
+            let queryUsername = currentUser ? currentUser.username : '';
+            FriendInfoApi.queryByUsername(queryUsername, (me: FriendInfo | null) => {
+              if (me) {
+                me.experience = res.experience;
+                FriendInfoApi.updateData(me, () => {
+                  resolve(result);
+                });
+              } else {
+                resolve(result);
+              }
+            });
           } else {
             reject(flag);
           }

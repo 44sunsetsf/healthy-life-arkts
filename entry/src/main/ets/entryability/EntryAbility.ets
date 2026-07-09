@@ -20,7 +20,8 @@ import {
   columnGlobalInfoList,
   columnTaskInfoInfoList,
   columnFormInfoList,
-  columnUserInfoList
+  columnUserInfoList,
+  columnFriendInfoList
 } from '../model/RdbColumnModel';
 import RdbUtils from '../common/database/rdb/RdbUtils';
 import Logger from '../common/utils/Logger';
@@ -30,6 +31,8 @@ import Want from '@ohos.app.ability.Want';
 import window from '@ohos.window';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import { GlobalContext } from '../common/utils/GlobalContext';
+import FriendInfoApi from '../common/database/tables/FriendInfoApi';
+import FriendInfo from '../viewmodel/FriendInfo';
 
 export default class EntryAbility extends UIAbility {
   private static TAG: string = 'EntryAbility';
@@ -76,6 +79,73 @@ export default class EntryAbility extends UIAbility {
       new ColumnInfo('signature', 'text', -1, false, false, false)).then(() => {
       Logger.info(`RdbHelper addColumn signature success`);
     }).catch(() => {});
+    await RdbUtils.addTableColumn(Const.USER_INFO.tableName ? Const.USER_INFO.tableName : '',
+      new ColumnInfo('username', 'text', -1, false, false, false)).then(() => {
+      Logger.info(`RdbHelper addColumn username to userInfo success`);
+    }).catch(() => {});
+
+    await RdbUtils.createTable(Const.FRIEND_INFO.tableName ? Const.FRIEND_INFO.tableName : '', columnFriendInfoList)
+      .then(() => {
+        Logger.info(`RdbHelper createTable friendInfo success`);
+      }).catch((err: Error) => {
+        Logger.error(`RdbHelper friendInfo createTable err : ${JSON.stringify(err)}`);
+      });
+    await RdbUtils.addTableColumn(Const.FRIEND_INFO.tableName ? Const.FRIEND_INFO.tableName : '',
+      new ColumnInfo('username', 'text', -1, false, false, false)).then(() => {
+      Logger.info(`RdbHelper addColumn username success`);
+    }).catch(() => {});
+
+    this.initFriendData();
+  }
+
+  initFriendData() {
+    FriendInfoApi.queryAll((list: FriendInfo[]) => {
+      if (list.length === 0) {
+        let initData: FriendInfo[] = [
+          new FriendInfo(0, 'xiaoming', '小明', '123123', 780, false),
+          new FriendInfo(0, 'xiaohong', '小红', '123123', 520, false),
+          new FriendInfo(0, 'xiaogang', '小刚', '123123', 430, false),
+          new FriendInfo(0, 'xiaomei', '小美', '123123', 310, false),
+          new FriendInfo(0, 'xiaoqiang', '小强', '123123', 150, false),
+          new FriendInfo(0, 'xxa', 'xxa', '123123', 0, true)
+        ];
+        for (let i = 0; i < initData.length; i++) {
+          FriendInfoApi.insertData(initData[i], (res: number) => {
+            Logger.info('EntryAbility', `insertFriend ${initData[i].nickname} result: ${res}`);
+          });
+        }
+        return;
+      }
+      let usernameMap: Record<string, string> = {
+        '小明': 'xiaoming',
+        '小红': 'xiaohong',
+        '小刚': 'xiaogang',
+        '小美': 'xiaomei',
+        '小强': 'xiaoqiang',
+        '我': 'xxa',
+        'xxa': 'xxa'
+      };
+      let nicknameMap: Record<string, string> = {
+        '我': 'xxa'
+      };
+      for (let i = 0; i < list.length; i++) {
+        let needUpdate = false;
+        if (!list[i].username || list[i].username === '') {
+          let mapped = usernameMap[list[i].nickname];
+          list[i].username = mapped ? mapped : list[i].nickname;
+          needUpdate = true;
+        }
+        if (nicknameMap[list[i].nickname]) {
+          list[i].nickname = nicknameMap[list[i].nickname];
+          needUpdate = true;
+        }
+        if (needUpdate) {
+          FriendInfoApi.updateData(list[i], () => {
+            Logger.info('EntryAbility', `updateFriend for ${list[i].username}`);
+          });
+        }
+      }
+    });
   }
 
   onWindowStageCreate(windowStage: window.WindowStage) {

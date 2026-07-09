@@ -22,7 +22,6 @@ import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import { NavList, TabId } from '../model/NavItemModel';
 import HomeIndex from '../view/HomeComponent';
 import { AchievementIndex } from '../view/AchievementComponent';
-import { RankIndex } from './RankPage';
 import { MineIndex } from './MinePage';
 import { HomeStore } from '../viewmodel/HomeViewModel';
 import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
@@ -125,11 +124,6 @@ struct Index {
         AchievementIndex()
       }
       .tabBar(this.TabBuilder(TabId.ACHIEVEMENT))
-
-      TabContent() {
-        RankIndex()
-      }
-      .tabBar(this.TabBuilder(TabId.RANK))
 
       TabContent() {
         MineIndex()

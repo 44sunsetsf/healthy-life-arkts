@@ -14,17 +14,45 @@
  */
 
 import router from '@ohos.router';
+import common from '@ohos.app.ability.common';
+import data_preferences from '@ohos.data.preferences';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
+import FriendInfoApi from '../common/database/tables/FriendInfoApi';
+import FriendInfo from '../viewmodel/FriendInfo';
+import { GlobalContext } from '../common/utils/GlobalContext';
+
+const H_STORE: string = 'healthAppStore';
+const IS_LOGIN: string = 'isLogin';
+const LOGIN_USER: string = 'loginUser';
 
 @Entry
 @Component
 struct AdvertisingPage {
   @State duration: number = Const.AD_DURATION;
   private intervalId: number = -1;
+  context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
 
-  goToHomePage() {
+  goToNextPage() {
     clearInterval(this.intervalId);
-    router.replaceUrl({ url: 'pages/MainPage' });
+    let preferences = data_preferences.getPreferences(this.context, H_STORE);
+    preferences.then((res) => {
+      res.get(IS_LOGIN, false).then((isLoginVal: data_preferences.ValueType) => {
+        let isLogin = isLoginVal as boolean;
+        if (isLogin === true) {
+          res.get(LOGIN_USER, '').then((usernameVal: data_preferences.ValueType) => {
+            let username = usernameVal as string;
+            FriendInfoApi.queryByUsername(username, (user: FriendInfo | null) => {
+              if (user) {
+                GlobalContext.getContext().setObject('currentUser', user);
+              }
+              router.replaceUrl({ url: 'pages/MainPage' });
+            });
+          });
+        } else {
+          router.replaceUrl({ url: 'pages/LoginPage' });
+        }
+      });
+    });
   }
 
   aboutToAppear() {
@@ -32,7 +60,7 @@ struct AdvertisingPage {
       if (this.duration > 0) {
         this.duration -= 1;
       } else {
-        this.goToHomePage();
+        this.goToNextPage();
       }
     }, Const.DURATION_1000)
   }
@@ -50,7 +78,7 @@ struct AdvertisingPage {
           .border({ color: $r('app.color.white'), width: $r('app.float.default_1') })
           .margin({ top: $r('app.float.default_36') })
           .padding($r('app.float.default_8'))
-          .onClick(() => this.goToHomePage())
+          .onClick(() => this.goToNextPage())
       }
       .width('90%')
       .justifyContent(FlexAlign.End)
