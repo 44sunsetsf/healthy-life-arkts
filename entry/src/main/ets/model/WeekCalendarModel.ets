@@ -28,6 +28,7 @@ export class WeekDateModel {
   date: Date;
   dayInfo: DayInfo = new DayInfo('', 0, 0);
   taskList: TaskInfo[] = [];
+  isCurrentMonth: boolean = true;
 
   constructor(weekTitle: string, dateStr: string, date: Date) {
     this.weekTitle = weekTitle;
@@ -90,4 +91,32 @@ export function getPreviousWeek(showDate: Date): WeekCalendarInfo {
   weekCalendarInfo.strArr = strArr;
   return weekCalendarInfo;
 }
-
+/**
+ * get month calendar data, including leading and trailing days.
+ *
+ * @param showDate base date in the target month
+ */
+export function getMonthCalendar(showDate: Date): WeekCalendarInfo {
+  let weekCalendarInfo: WeekCalendarInfo = new WeekCalendarInfo();
+  let arr: Array<WeekDateModel> = [];
+  let strArr: Array<string> = [];
+  let firstDate = new Date(showDate.getFullYear(), showDate.getMonth(), 1);
+  let firstDay = firstDate.getDay() - 1;
+  if (firstDate.getDay() === 0) {
+    firstDay = 6;
+  }
+  let startDate = new Date(firstDate);
+  startDate.setDate(firstDate.getDate() - firstDay);
+  for (let index = 0; index < 42; index++) {
+    let tempDate = new Date(startDate);
+    tempDate.setDate(startDate.getDate() + index);
+    let dateStr = dateToStr(tempDate);
+    let weekDateModel = new WeekDateModel(WEEK_TITLES[tempDate.getDay()], dateStr, tempDate);
+    weekDateModel.isCurrentMonth = tempDate.getMonth() === showDate.getMonth();
+    strArr.push(dateStr);
+    arr.push(weekDateModel);
+  }
+  weekCalendarInfo.arr = arr;
+  weekCalendarInfo.strArr = strArr;
+  return weekCalendarInfo;
+}

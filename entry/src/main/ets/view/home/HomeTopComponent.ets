@@ -29,6 +29,7 @@ import HealthText from '../../view/HealthTextComponent';
 @Component
 export default struct HomeTopView {
   @Link homeStore: HomeStore;
+  openMonthAction: Function = () => {};
 
   build() {
     Column() {
@@ -51,7 +52,7 @@ export default struct HomeTopView {
       .width(Const.THOUSANDTH_1000)
       .padding({ left: $r('app.float.default_24') })
 
-      WeekCalendar({ homeStore:  $homeStore })
+      WeekCalendar({ homeStore:  $homeStore, openMonthAction: (): void => { this.openMonthAction(); } })
     }
     .height(Const.THOUSANDTH_500)
     .backgroundImagePosition({x: 0, y: 0})

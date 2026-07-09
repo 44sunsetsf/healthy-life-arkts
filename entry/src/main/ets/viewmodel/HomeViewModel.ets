@@ -19,7 +19,7 @@ import { TaskMapById, ITaskItem, ACHIEVEMENT_LEVEL_LIST } from '../model/TaskIni
 import TaskInfo from './TaskInfo';
 import DayInfo from './DayInfo';
 import { dateToStr, weekDateFormat } from '../common/utils/Utils';
-import { WeekDateModel, initializeOnStartUp, getPreviousWeek, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
+import { WeekDateModel, initializeOnStartUp, getPreviousWeek, getMonthCalendar, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
 import DatabaseApi from '../model/DatabaseModel';
 import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
 import DayInfoApi from '../common/database/tables/DayInfoApi';
@@ -33,6 +33,11 @@ import AchievementInfo from './AchievementInfo';
 export class HomeStore {
   public currentDate: Date;
   public dateArr: Array<WeekDateModel> = []; // data source list
+  public monthDateArr: Array<WeekDateModel> = [];
+  public monthDayInfoCache: Array<DayInfo> = [];
+  public isMonthHistoryLoaded: boolean = false;
+  public isMonthHistoryLoading: boolean = false;
+  public monthHistoryCallbacks: Array<Function> = [];
   public selectedDay: number; // selected day of on week
   public showDate: number;
   public dateTitle: string;
@@ -70,6 +75,7 @@ export class HomeStore {
         }, 0)
       })
     })
+    this.preloadMonthHistoryData((): void => {});
   }
 
   public getPreWeekData(date: Date, callback: Function) {
@@ -88,6 +94,80 @@ export class HomeStore {
       this.dateArr = weekCalendarInfo.arr.concat(...this.dateArr);
       callback();
     })
+  }
+
+  public preloadMonthHistoryData(callback: Function): void {
+    if (this.isMonthHistoryLoaded) {
+      callback();
+      return;
+    }
+    this.monthHistoryCallbacks.push(callback);
+    if (this.isMonthHistoryLoading) {
+      return;
+    }
+    this.isMonthHistoryLoading = true;
+    let dateStrList: Array<string> = [];
+    let currentDate = new Date();
+    for (let offset = 0; offset <= 6; offset++) {
+      let monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - offset, 1);
+      let monthCalendarInfo: WeekCalendarInfo = getMonthCalendar(monthDate);
+      for (let index = 0; index < monthCalendarInfo.strArr.length; index++) {
+        if (!dateStrList.includes(monthCalendarInfo.strArr[index])) {
+          dateStrList.push(monthCalendarInfo.strArr[index]);
+        }
+      }
+    }
+    DayInfoApi.queryList(dateStrList, (res: DayInfo[]) => {
+      this.updateMonthDayInfoCache(res);
+      this.isMonthHistoryLoaded = true;
+      this.isMonthHistoryLoading = false;
+      let callbacks = this.monthHistoryCallbacks.slice(0);
+      this.monthHistoryCallbacks = [];
+      callbacks.forEach((item: Function): void => {
+        item();
+      });
+    });
+  }
+
+  public updateMonthDayInfoCache(dayInfoList: Array<DayInfo>): void {
+    for (let index = 0; index < dayInfoList.length; index++) {
+      let dayInfoStr = JSON.stringify(dayInfoList[index]);
+      let dayInfo: DayInfo = JSON.parse(dayInfoStr);
+      let cacheIndex = this.monthDayInfoCache.findIndex((item: DayInfo) => item.date === dayInfo.date);
+      if (cacheIndex >= 0) {
+        this.monthDayInfoCache[cacheIndex] = dayInfo;
+      } else {
+        this.monthDayInfoCache.push(dayInfo);
+      }
+    }
+  }
+
+  public syncMonthDayInfoCache(dayInfo: DayInfo): void {
+    this.updateMonthDayInfoCache([dayInfo]);
+  }
+
+  public fillMonthDataFromCache(monthCalendarInfo: WeekCalendarInfo): void {
+    for (let i = 0; i < monthCalendarInfo.arr.length; i++) {
+      let tempDayInfo = this.monthDayInfoCache.find((item: DayInfo) => item.date === monthCalendarInfo.arr[i].dateStr) ||
+        new DayInfo(monthCalendarInfo.arr[i].dateStr, 0, 0);
+      monthCalendarInfo.arr[i].dayInfo = tempDayInfo;
+    }
+  }
+
+  public getMonthData(date: Date, callback: Function): void {
+    let monthCalendarInfo: WeekCalendarInfo = getMonthCalendar(new Date(date));
+    this.fillMonthDataFromCache(monthCalendarInfo);
+    this.monthDateArr = monthCalendarInfo.arr;
+    if (this.isMonthHistoryLoaded) {
+      callback();
+      return;
+    }
+    DayInfoApi.queryList(monthCalendarInfo.strArr, (res: DayInfo[]) => {
+      this.updateMonthDayInfoCache(res);
+      this.fillMonthDataFromCache(monthCalendarInfo);
+      this.monthDateArr = monthCalendarInfo.arr;
+      callback();
+    });
   }
 
   // check is current day
@@ -130,7 +210,7 @@ export class HomeStore {
       let endTime = editedTaskInfo.endTime;
       let isOpen = editedTaskInfo.isOpen;
       let task = new TaskInfo(0, dateToStr(new Date()), taskID, targetValue, isAlarm,
-        startTime, endTime, frequency, true, targetValue, isOpen);
+        startTime, endTime, frequency, false, '', isOpen);
       this.dateArr = this.dateArr.map((item: WeekDateModel) => {
         if (task.date === item.dateStr) {
           Logger.info('item', JSON.stringify(item));
@@ -163,6 +243,7 @@ export class HomeStore {
           if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
             dayInfo.finTaskNum = dayInfo.targetTaskNum;
           }
+          this.syncMonthDayInfoCache(dayInfo);
           DayInfoApi.updateData(dayInfo, () => {
           });
           Logger.debug("tempDayInfo", JSON.stringify(dayInfo));
@@ -282,6 +363,7 @@ export class HomeStore {
         // 同步界面数据
         let dayInfoStr = JSON.stringify(dayInfo);
         this.selectedDayInfo.dayInfo = JSON.parse(dayInfoStr);
+        this.syncMonthDayInfoCache(dayInfo);
         resolve(dayInfo);
       });
     });

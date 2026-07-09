@@ -90,6 +90,27 @@ const isHasNotificationId = (notificationId: number) => {
   });
 }
 
+const saveTaskInfo = (taskInfo: TaskInfo) => {
+  return new Promise<number>((resolve, reject) => {
+    TaskInfoApi.query(taskInfo.date, false, (res: TaskInfo[]) => {
+      const hasTask = res.some((item: TaskInfo) => item.taskID === taskInfo.taskID);
+      if (hasTask) {
+        TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
+          resolve(flag || 1);
+        });
+        return;
+      }
+      TaskInfoApi.insertData(taskInfo, (insertFlag: number) => {
+        if (!insertFlag) {
+          reject(insertFlag);
+          return;
+        }
+        resolve(insertFlag);
+      });
+    });
+  });
+}
+
 /**
  * @param params:TaskInfo
  */
@@ -119,24 +140,19 @@ export const addTask = (params: TaskInfo, context: Context) => {
         }
       });
     }
-    TaskInfoApi.updateDataByDate(params, (flag: number) => {
-      if (!flag) {
-        Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
-        reject(flag);
-      }
-      resolve(flag);
-    });
-    let taskInfoStr = JSON.stringify(params);
-    let taskInfo: TaskInfo = JSON.parse(taskInfoStr);
-    taskInfo.date = new Date().toDateString();
-    taskInfo.isDone = true;
-    TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
-      if (!flag) {
-        Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
-        reject(flag);
-      }
-      resolve(flag);
-    });
+    try {
+      await saveTaskInfo(params);
+      let taskInfoStr = JSON.stringify(params);
+      let taskInfo: TaskInfo = JSON.parse(taskInfoStr);
+      taskInfo.date = new Date().toDateString();
+      taskInfo.isDone = false;
+      taskInfo.finValue = '';
+      await saveTaskInfo(taskInfo);
+      resolve(1);
+    } catch (error) {
+      Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
+      reject(error);
+    }
   });
 }
 
@@ -220,6 +236,18 @@ export const createDrinkRange = () => {
     drinkRangeArr.push(`${i / Const.TIMES_100} L`);
   }
   return drinkRangeArr;
+}
+
+/**
+ * @description Generate the range of running 1 - 20 km
+ * @return Array<string>
+ */
+export const createRunRange = () => {
+  const runRangeArr: Array<string> = [];
+  for (let i = 1; i <= Const.RUN_MAX_RANGE; i++) {
+    runRangeArr.push(`${i} km`);
+  }
+  return runRangeArr;
 }
 
 /**

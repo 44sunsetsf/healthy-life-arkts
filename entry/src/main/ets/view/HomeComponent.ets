@@ -18,6 +18,7 @@ import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
+import { MonthCalendar } from '../view/home/MonthCalendarComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
 import TaskInfo from '../viewmodel/TaskInfo';
 import { HomeStore } from '../viewmodel/HomeViewModel';
@@ -53,6 +54,7 @@ function titleTextStyle() {
 export default struct HomeIndex {
   @Provide broadCast: BroadCast = HealthDataSrcMgr.getInstance().getBroadCast();
   @State naviAlpha: number = 0;
+  @State isMonthViewVisible: boolean = false;
   @Link homeStore: HomeStore;
   @Link editedTaskInfo: ITaskItem;
   @Link @Watch('taskChange') editedTaskID: string;
@@ -121,7 +123,14 @@ export default struct HomeIndex {
     Stack() {
       Scroll(this.scroller) {
         Column() {
-          HomeTopView({ homeStore: $homeStore })
+          HomeTopView({
+            homeStore: $homeStore,
+            openMonthAction: (): void => {
+              this.homeStore.getMonthData(new Date(this.homeStore.showDate), (): void => {
+                this.isMonthViewVisible = true;
+              });
+            }
+          })
           Text($r('app.string.task_list')).titleTextStyle()
           if (this.homeStore.getTaskListOfDay().length > 0) {
             Column({ space: Const.DEFAULT_8 }) {
@@ -177,6 +186,14 @@ export default struct HomeIndex {
       .backgroundColor(`rgba(${WHITE_COLOR_0X},${WHITE_COLOR_0X},${WHITE_COLOR_0X},${this.naviAlpha})`)
 
       CustomDialogView()
+      if (this.isMonthViewVisible) {
+        MonthCalendar({
+          homeStore: $homeStore,
+          closeAction: (): void => {
+            this.isMonthViewVisible = false;
+          }
+        })
+      }
     }
     .allSize()
     .backgroundColor($r('app.color.primaryBgColor'))

@@ -30,6 +30,7 @@ const DEFAULT_SCROLL_PERCENT = 0.934; // default calendar width percent
 @Component
 export struct WeekCalendar {
   @Link homeStore: HomeStore;
+  openMonthAction: Function = () => {};
   currentPage: number = 1;
   private scroller: Scroller = new Scroller();
   scrollWidth: number = DEFAULT_SCROLL_WIDTH;
@@ -74,15 +75,55 @@ export struct WeekCalendar {
       WeekCalendarMethods.gotoPreviousWeek(this.isPageScroll, this.homeStore, this.currentPage, this.scroller))
   }
 
+  @Builder
+  MonthViewIcon() {
+    Column() {
+      Row() {
+        Blank()
+          .width($r('app.float.default_4'))
+          .height(Const.DEFAULT_2)
+          .backgroundColor($r('app.color.blueColor'))
+          .margin({ right: $r('app.float.default_4') })
+        Blank()
+          .width($r('app.float.default_4'))
+          .height(Const.DEFAULT_2)
+          .backgroundColor($r('app.color.blueColor'))
+      }
+      .height($r('app.float.default_6'))
+      .justifyContent(FlexAlign.Center)
+
+      Text('月')
+        .fontSize($r('app.float.default_12'))
+        .fontWeight(Const.FONT_WEIGHT_700)
+        .fontColor($r('app.color.blueColor'))
+        .textAlign(TextAlign.Center)
+    }
+    .width($r('app.float.default_24'))
+    .height($r('app.float.default_24'))
+    .justifyContent(FlexAlign.Center)
+    .border({
+      width: $r('app.float.default_1'),
+      color: $r('app.color.blueColor'),
+      radius: $r('app.float.default_4')
+    })
+    .margin({ right: $r('app.float.default_12') })
+    .onClick((): void => this.openMonthAction())
+  }
   build() {
     Row() {
       Column() {
         Row() {
+          Blank()
+            .layoutWeight(1)
           this.ArrowIcon(false)
           HealthText({ title: this.homeStore.dateTitle, fontSize: $r('app.float.default_14') })
             .margin($r('app.float.default_12'))
           this.ArrowIcon(true)
+          Blank()
+            .layoutWeight(1)
+          this.MonthViewIcon()
         }
+        .width(Const.THOUSANDTH_1000)
         .justifyContent(FlexAlign.Center)
 
         Scroll(this.scroller) {
