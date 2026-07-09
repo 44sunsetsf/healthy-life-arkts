@@ -49,9 +49,9 @@ export struct RankIndex {
   }
 
   getTrophyText(index: number): string {
-    if (index === 0) return '\uD83E\uDD47';
-    if (index === 1) return '\uD83E\uDD48';
-    if (index === 2) return '\uD83E\uDD49';
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
     return `${index + 1}`;
   }
 

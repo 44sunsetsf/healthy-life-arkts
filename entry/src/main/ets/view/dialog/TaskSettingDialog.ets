@@ -134,7 +134,21 @@ export struct TargetSettingDialog {
 export struct RemindTimeDialog {
   @Consume settingParams: ITaskItem;
   controller: CustomDialogController = new CustomDialogController({ builder: '' });
-  currentTime: string = Const.DEFAULT_TIME;
+  @State timeList: string[] = [];
+
+  aboutToAppear() {
+    this.initTimeList();
+  }
+
+  initTimeList() {
+    let target: number = parseInt(this.settingParams?.targetValue) || 1;
+    let existingTimes: string[] = this.settingParams?.startTime ?
+      this.settingParams.startTime.split(',').map(t => t.trim()) : [];
+    this.timeList = [];
+    for (let i = 0; i < target; i++) {
+      this.timeList.push(existingTimes[i] || Const.DEFAULT_TIME);
+    }
+  }
 
   build() {
     Column() {
@@ -147,25 +161,40 @@ export struct RemindTimeDialog {
       }
       .width(Const.THOUSANDTH_900)
 
-      TimePicker({
-        selected: new Date(`${new Date().toDateString()} 8:00:00`),
-      })
-        .height(Const.THOUSANDTH_800)
-        .useMilitaryTime(true)
-        .onChange((value: TimePickerResult) => {
-          this.currentTime = formatTime(value);
-        })
+      Scroll() {
+        Column() {
+          ForEach(this.timeList, (time: string, index: number) => {
+            Column() {
+              Text(`提醒 ${index + 1}`)
+                .fontSize(Const.DEFAULT_16)
+                .fontColor($r('app.color.titleColor'))
+                .padding({ top: Const.DEFAULT_10, bottom: Const.DEFAULT_6 })
+
+              TimePicker({
+                selected: new Date(`${new Date().toDateString()} ${time}`),
+              })
+                .height(Const.THOUSANDTH_400)
+                .useMilitaryTime(true)
+                .onChange((value: TimePickerResult) => {
+                  this.timeList[index] = formatTime(value);
+                })
+            }
+            .width(Const.THOUSANDTH_1000)
+          }, (item: string, index: number) => `${index}`)
+        }
+        .width(Const.THOUSANDTH_1000)
+      }
+      .flexGrow(1)
 
       Row() {
         Text($r('app.string.cancel')).fontSize(Const.DEFAULT_20).fontColor($r('app.color.blueColor'))
           .onClick(() => {
-            this.currentTime = Const.DEFAULT_TIME;
             this.controller.close();
           })
 
         Text($r('app.string.confirm')).fontSize(Const.DEFAULT_20).fontColor($r('app.color.blueColor'))
           .onClick(() => {
-            this.settingParams.startTime = this.currentTime;
+            this.settingParams.startTime = this.timeList.join(',');
             this.controller.close();
           })
       }
@@ -175,7 +204,7 @@ export struct RemindTimeDialog {
       .margin({ bottom: Const.DEFAULT_20 })
     }
     .justifyContent(FlexAlign.Center)
-    .height(Const.THOUSANDTH_560)
+    .height(Const.THOUSANDTH_900)
     .padding(Const.DEFAULT_12)
   }
 }

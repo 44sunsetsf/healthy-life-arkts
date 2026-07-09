@@ -160,12 +160,9 @@ export class HomeStore {
             // delete task
             let taskIndex = taskList.findIndex((taskItem) => taskItem.taskID === taskID);
             Logger.info('taskList[taskIndex]', JSON.stringify(taskList[taskIndex]));
-            if (taskList[taskIndex]?.isDone) {
-              dayInfo.finTaskNum -= 1;
-            }
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
           }
-          dayInfo.targetTaskNum = taskList.length;
+          dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
           if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
             dayInfo.finTaskNum = dayInfo.targetTaskNum;
           }
@@ -291,7 +288,7 @@ export class HomeStore {
   updateDayInfo(): Promise<DayInfo> {
     let dayInfo: DayInfo = this.selectedDayInfo.dayInfo;
     dayInfo.finTaskNum += 1;
-    dayInfo.targetTaskNum = this.selectedDayInfo.taskList.length;
+    dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
     return new Promise((resolve, reject) => {
       DayInfoApi.updateData(dayInfo, (res: number) => {
         if (!res) {

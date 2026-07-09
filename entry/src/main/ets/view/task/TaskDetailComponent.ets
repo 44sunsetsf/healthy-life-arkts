@@ -44,9 +44,8 @@ import { GlobalContext } from '../../common/utils/GlobalContext';
 @Component
 export default struct TaskDetail {
   @Provide broadCast: BroadCast = HealthDataSrcMgr.getInstance().getBroadCast();
-  @Provide @Watch('onParamsChanged') settingParams: ITaskItem = this.parseRouterParams();
+  @Provide settingParams: ITaskItem = this.parseRouterParams();
   @Provide frequency: string = initFrequencyString(this.settingParams?.frequency);
-  private isChanged: boolean = false;
 
   parseRouterParams() {
     let params = router.getParams() as Record<string, Object>;
@@ -54,40 +53,30 @@ export default struct TaskDetail {
     return routerParams;
   }
 
-  onParamsChanged() {
-    this.isChanged = true;
-  }
-
   backIndexParams(): string {
     return formatParams(this.settingParams);
   }
 
   finishTaskEdit() {
-    if (this.isChanged) {
-      let context: Context = getContext(this) as common.Context;
-      let taskInfo: TaskInfo = new TaskInfo(Const.ZERO, Const.GLOBAL_KEY, this.settingParams.taskID,
-        this.settingParams.targetValue, this.settingParams.isAlarm, this.settingParams.startTime,
-        this.settingParams.endTime, this.settingParams.frequency, false, '', this.settingParams.isOpen);
-      addTask(taskInfo, context).then((res: number) => {
-        GlobalContext.getContext().setObject('taskListChange', true);
-        router.back({
-          url: 'pages/MainPage',
-          params: {
-            editTask: this.backIndexParams(),
-          }
-        })
-        Logger.info('addTaskFinished', JSON.stringify(res));
-      }).catch((error: Error) => {
-        prompt.showToast({
-          message: Const.SETTING_FINISH_FAILED_MESSAGE
-        })
-        Logger.error('addTaskFailed', JSON.stringify(error));
+    let context: Context = getContext(this) as common.Context;
+    let taskInfo: TaskInfo = new TaskInfo(Const.ZERO, Const.GLOBAL_KEY, this.settingParams.taskID,
+      this.settingParams.targetValue, this.settingParams.isAlarm, this.settingParams.startTime,
+      this.settingParams.endTime, this.settingParams.frequency, false, '', this.settingParams.isOpen);
+    addTask(taskInfo, context).then((res: number) => {
+      GlobalContext.getContext().setObject('taskListChange', true);
+      router.back({
+        url: 'pages/MainPage',
+        params: {
+          editTask: this.backIndexParams(),
+        }
       })
-      return;
-    }
-    router.back({
-      url: 'pages/MainPage',
-    });
+      Logger.info('addTaskFinished', JSON.stringify(res));
+    }).catch((error: Error) => {
+      prompt.showToast({
+        message: Const.SETTING_FINISH_FAILED_MESSAGE
+      })
+      Logger.error('addTaskFailed', JSON.stringify(error));
+    })
   }
 
   aboutToAppear() {
