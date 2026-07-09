@@ -1,30 +1,45 @@
 import { CommonConstants as Const } from '../../common/constants/CommonConstants';
-import { HealthDashboardData } from '../model/HealthDashboardModel';
+import { HealthCalendarDay, HealthDashboardData } from '../model/HealthDashboardModel';
 import { HealthMockService } from '../service/HealthMockService';
+
+const WEIGHT_CHART_SEGMENT_WIDTH: number = 48;
+const WEIGHT_CHART_LEFT: number = 8;
+const WEIGHT_CHART_TOP: number = 8;
+const WEIGHT_CHART_RANGE: number = 44;
+const WEIGHT_CHART_HEIGHT: number = 64;
 
 @Component
 export struct HealthPage {
   @State healthData: HealthDashboardData = new HealthDashboardData();
+  @State calendarDays: HealthCalendarDay[] = [];
+  @State dailyDataList: HealthDashboardData[] = [];
+  @State selectedDayIndex: number = 0;
   @State foodInput: string = '';
   @State weightInput: string = '';
   @State showWeightInput: boolean = false;
   private healthService: HealthMockService = new HealthMockService();
 
   aboutToAppear() {
-    this.healthData = this.healthService.createInitialData();
+    this.calendarDays = this.healthService.createCalendarDays();
+    this.dailyDataList = this.healthService.createDashboardDataList(this.calendarDays);
+    this.selectedDayIndex = this.findTodayIndex();
+    this.healthData = this.getDataByIndex(this.selectedDayIndex);
   }
 
   syncWatchData() {
-    this.healthData = this.healthService.syncWatchData(this.healthData);
+    if (!this.isSelectedToday()) {
+      return;
+    }
+    this.updateSelectedData(this.healthService.syncWatchData(this.healthData));
   }
 
   addWater(amountMl: number) {
-    this.healthData = this.healthService.addWater(this.healthData, amountMl);
+    this.updateSelectedData(this.healthService.addWater(this.healthData, amountMl));
   }
 
   saveWeightRecord() {
     let weightValue = Number(this.weightInput.trim());
-    this.healthData = this.healthService.setWeightRecord(this.healthData, this.weightInput);
+    this.updateSelectedData(this.healthService.setWeightRecord(this.healthData, this.weightInput));
     if (!Number.isNaN(weightValue) && weightValue >= 30 && weightValue <= 250) {
       this.weightInput = '';
       this.showWeightInput = false;
@@ -39,11 +54,14 @@ export struct HealthPage {
   }
 
   analyzeFood() {
-    this.healthData = this.healthService.analyzeFood(this.healthData, this.foodInput);
+    this.updateSelectedData(this.healthService.analyzeFood(this.healthData, this.foodInput));
     this.foodInput = '';
   }
 
   toggleMood() {
+    if (!this.isSelectedToday()) {
+      return;
+    }
     let next = this.healthService.addWater(this.healthData, 0);
     if (this.healthData.moodText === '平稳') {
       next.moodText = '开心';
@@ -52,7 +70,57 @@ export struct HealthPage {
     } else {
       next.moodText = '平稳';
     }
+    this.updateSelectedData(next);
+  }
+
+  selectDay(dayIndex: number) {
+    if (dayIndex < 0 || dayIndex >= this.calendarDays.length) {
+      return;
+    }
+    if (this.calendarDays[dayIndex].isFuture) {
+      return;
+    }
+    this.selectedDayIndex = dayIndex;
+    this.healthData = this.getDataByIndex(dayIndex);
+    this.foodInput = '';
+    this.weightInput = '';
+    this.showWeightInput = false;
+  }
+
+  updateSelectedData(next: HealthDashboardData) {
     this.healthData = next;
+    let nextList: HealthDashboardData[] = [];
+    for (let index = 0; index < this.dailyDataList.length; index++) {
+      if (index === this.selectedDayIndex) {
+        nextList.push(next);
+      } else {
+        nextList.push(this.dailyDataList[index]);
+      }
+    }
+    this.dailyDataList = nextList;
+  }
+
+  getDataByIndex(dayIndex: number): HealthDashboardData {
+    if (dayIndex < 0 || dayIndex >= this.dailyDataList.length) {
+      return this.healthService.createInitialData();
+    }
+    return this.dailyDataList[dayIndex];
+  }
+
+  findTodayIndex(): number {
+    for (let index = 0; index < this.calendarDays.length; index++) {
+      if (this.calendarDays[index].isToday) {
+        return index;
+      }
+    }
+    return 0;
+  }
+
+  isSelectedToday(): boolean {
+    if (this.selectedDayIndex < 0 || this.selectedDayIndex >= this.calendarDays.length) {
+      return true;
+    }
+    return this.calendarDays[this.selectedDayIndex].isToday;
   }
 
   getWatchNumber(value: number): string {
@@ -133,6 +201,98 @@ export struct HealthPage {
     return `${integerPart}.${decimalPart}`;
   }
 
+  getSafeIndex(index?: number): number {
+    if (index === undefined) {
+      return 0;
+    }
+    return index;
+  }
+
+  getWeightChartIndexes(): number[] {
+    let indexes: number[] = [];
+    for (let index = 0; index < this.calendarDays.length; index++) {
+      if (!this.calendarDays[index].isFuture) {
+        indexes.push(index);
+      }
+    }
+    return indexes;
+  }
+
+  getWeightSegmentIndexes(): number[] {
+    let indexes: number[] = [];
+    let pointCount = this.getWeightChartIndexes().length;
+    for (let index = 0; index < pointCount - 1; index++) {
+      indexes.push(index);
+    }
+    return indexes;
+  }
+
+  getWeightValueByDayIndex(dayIndex: number): number {
+    if (dayIndex < 0 || dayIndex >= this.dailyDataList.length) {
+      return this.healthData.weightKg;
+    }
+    return this.dailyDataList[dayIndex].weightKg;
+  }
+
+  getWeightValueByPosition(position: number): number {
+    let indexes = this.getWeightChartIndexes();
+    if (position < 0 || position >= indexes.length) {
+      return this.healthData.weightKg;
+    }
+    return this.getWeightValueByDayIndex(indexes[position]);
+  }
+
+  getWeightTrendMin(): number {
+    let minValue = 300;
+    let indexes = this.getWeightChartIndexes();
+    for (let position = 0; position < indexes.length; position++) {
+      let value = this.getWeightValueByDayIndex(indexes[position]);
+      if (value < minValue) {
+        minValue = value;
+      }
+    }
+    return minValue;
+  }
+
+  getWeightTrendMax(): number {
+    let maxValue = 0;
+    let indexes = this.getWeightChartIndexes();
+    for (let position = 0; position < indexes.length; position++) {
+      let value = this.getWeightValueByDayIndex(indexes[position]);
+      if (value > maxValue) {
+        maxValue = value;
+      }
+    }
+    return maxValue;
+  }
+
+  getWeightRangeText(): string {
+    return `${this.formatOneDecimal(this.getWeightTrendMin())}-${this.formatOneDecimal(this.getWeightTrendMax())}kg`;
+  }
+
+  getWeightPointX(position: number): number {
+    return WEIGHT_CHART_LEFT + position * WEIGHT_CHART_SEGMENT_WIDTH;
+  }
+
+  getWeightPointY(position: number): number {
+    let minValue = this.getWeightTrendMin();
+    let maxValue = this.getWeightTrendMax();
+    let range = maxValue - minValue;
+    if (range < 0.1) {
+      return WEIGHT_CHART_TOP + Math.floor(WEIGHT_CHART_RANGE / 2);
+    }
+    let value = this.getWeightValueByPosition(position);
+    return WEIGHT_CHART_TOP + WEIGHT_CHART_RANGE - Math.floor((value - minValue) * WEIGHT_CHART_RANGE / range);
+  }
+
+  getWeightChartWidth(): number {
+    let count = this.getWeightChartIndexes().length;
+    if (count <= 1) {
+      return WEIGHT_CHART_LEFT * 2 + WEIGHT_CHART_SEGMENT_WIDTH;
+    }
+    return WEIGHT_CHART_LEFT * 2 + (count - 1) * WEIGHT_CHART_SEGMENT_WIDTH;
+  }
+
   @Builder Header() {
     Column() {
       Row() {
@@ -149,28 +309,33 @@ export struct HealthPage {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Button('同步手表')
-          .fontSize(13)
-          .fontColor('#FFFFFF')
-          .height(38)
-          .padding({ left: 14, right: 14 })
-          .backgroundColor('#007DFF')
-          .borderRadius(19)
-          .onClick(() => {
-            this.syncWatchData();
-          })
+        if (this.isSelectedToday()) {
+          Button('同步手表')
+            .fontSize(13)
+            .fontColor('#FFFFFF')
+            .height(38)
+            .padding({ left: 14, right: 14 })
+            .backgroundColor('#007DFF')
+            .borderRadius(19)
+            .onClick(() => {
+              this.syncWatchData();
+            })
+        } else {
+          Text('历史记录')
+            .fontSize(13)
+            .fontColor('#30C6B0')
+            .padding({ left: 14, right: 14, top: 9, bottom: 9 })
+            .backgroundColor('#E8F8F5')
+            .borderRadius(19)
+        }
       }
       .width(Const.FULL_WIDTH)
       .alignItems(VerticalAlign.Center)
 
       Row({ space: 8 }) {
-        this.DayItem('一', '06')
-        this.DayItem('二', '07')
-        this.DayItem('三', '08')
-        this.DayItem('四', '09')
-        this.DayItem('五', '10')
-        this.DayItem('六', '11')
-        this.DayItem('日', '12')
+        ForEach(this.calendarDays, (item: HealthCalendarDay, index?: number) => {
+          this.DayItem(item, index ? index : 0)
+        }, (item: HealthCalendarDay) => item.dateKey)
       }
       .width(Const.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
@@ -180,22 +345,26 @@ export struct HealthPage {
     .padding({ left: 18, right: 18, top: 18, bottom: 12 })
   }
 
-  @Builder DayItem(weekText: string, dayText: string) {
+  @Builder DayItem(day: HealthCalendarDay, dayIndex: number) {
     Column() {
-      Text(weekText)
+      Text(day.weekText)
         .fontSize(12)
-        .fontColor(dayText === '09' ? '#182431' : '#9AA3AD')
-      Text(dayText)
+        .fontColor(this.selectedDayIndex === dayIndex ? '#182431' : '#9AA3AD')
+      Text(day.dayText)
         .fontSize(16)
-        .fontWeight(dayText === '09' ? FontWeight.Bold : FontWeight.Medium)
-        .fontColor(dayText === '09' ? '#182431' : '#9AA3AD')
+        .fontWeight(this.selectedDayIndex === dayIndex ? FontWeight.Bold : FontWeight.Medium)
+        .fontColor(this.selectedDayIndex === dayIndex ? '#182431' : '#9AA3AD')
         .margin({ top: 4 })
     }
     .width(42)
     .height(58)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(dayText === '09' ? '#FFFFFF' : 'rgba(255,255,255,0)')
+    .backgroundColor(this.selectedDayIndex === dayIndex ? '#FFFFFF' : 'rgba(255,255,255,0)')
     .borderRadius(8)
+    .opacity(day.isFuture ? 0.42 : 1)
+    .onClick(() => {
+      this.selectDay(dayIndex);
+    })
   }
 
   @Builder DietCard() {
@@ -284,7 +453,7 @@ export struct HealthPage {
           .layoutWeight(1)
           .onClick(() => {
             this.foodInput = '米饭 鸡胸肉 青菜';
-            this.healthData = this.healthService.analyzeFood(this.healthData, this.foodInput);
+            this.updateSelectedData(this.healthService.analyzeFood(this.healthData, this.foodInput));
             this.foodInput = '';
           })
       }
@@ -593,6 +762,52 @@ export struct HealthPage {
     .borderRadius(8)
   }
 
+  @Builder WeightTrendChart() {
+    Column() {
+      Stack({ alignContent: Alignment.TopStart }) {
+        ForEach(this.getWeightSegmentIndexes(), (position: number) => {
+          Line()
+            .width(WEIGHT_CHART_SEGMENT_WIDTH)
+            .height(WEIGHT_CHART_HEIGHT)
+            .startPoint([0, this.getWeightPointY(position)])
+            .endPoint([WEIGHT_CHART_SEGMENT_WIDTH, this.getWeightPointY(position + 1)])
+            .stroke('#64C8A1')
+            .strokeWidth(2)
+            .position({ x: this.getWeightPointX(position), y: 0 })
+        }, (position: number) => position.toString())
+
+        ForEach(this.getWeightChartIndexes(), (dayIndex: number, position?: number) => {
+          Circle()
+            .width(this.selectedDayIndex === dayIndex ? 10 : 8)
+            .height(this.selectedDayIndex === dayIndex ? 10 : 8)
+            .fill(this.selectedDayIndex === dayIndex ? '#30C6B0' : '#64C8A1')
+            .position({
+              x: this.getWeightPointX(this.getSafeIndex(position)) - 4,
+              y: this.getWeightPointY(this.getSafeIndex(position)) - 4
+            })
+        }, (dayIndex: number) => dayIndex.toString())
+      }
+      .width(this.getWeightChartWidth())
+      .height(WEIGHT_CHART_HEIGHT)
+      .margin({ top: 18 })
+
+      Row() {
+        ForEach(this.getWeightChartIndexes(), (dayIndex: number) => {
+          Text(this.calendarDays[dayIndex].dayText)
+            .fontSize(11)
+            .fontColor(this.selectedDayIndex === dayIndex ? '#30C6B0' : '#9AA3AD')
+            .textAlign(TextAlign.Center)
+            .width(28)
+        }, (dayIndex: number) => `label-${dayIndex}`)
+      }
+      .width(this.getWeightChartWidth())
+      .justifyContent(FlexAlign.SpaceBetween)
+      .margin({ top: 2 })
+    }
+    .width(Const.FULL_WIDTH)
+    .alignItems(HorizontalAlign.Center)
+  }
+
   @Builder WeightCard() {
     Column() {
       Row() {
@@ -615,40 +830,7 @@ export struct HealthPage {
       .width(Const.FULL_WIDTH)
       .alignItems(VerticalAlign.Center)
 
-      Row() {
-        Circle()
-          .width(8)
-          .height(8)
-          .fill('#64C8A1')
-        Blank()
-          .width('18%')
-          .height(2)
-          .backgroundColor('#64C8A1')
-        Circle()
-          .width(8)
-          .height(8)
-          .fill('#64C8A1')
-        Blank()
-          .width('18%')
-          .height(2)
-          .backgroundColor('#64C8A1')
-        Circle()
-          .width(8)
-          .height(8)
-          .fill('#64C8A1')
-        Blank()
-          .width('18%')
-          .height(2)
-          .backgroundColor('#64C8A1')
-        Circle()
-          .width(8)
-          .height(8)
-          .fill('#64C8A1')
-      }
-      .width(Const.FULL_WIDTH)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: 24 })
+      this.WeightTrendChart()
 
       Row() {
         Text(`${this.formatOneDecimal(this.healthData.weightKg)}kg`)
@@ -660,7 +842,7 @@ export struct HealthPage {
           .fontColor('#6D7784')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-        Text(`${this.formatOneDecimal(this.healthData.weightMinKg)}-${this.formatOneDecimal(this.healthData.weightMaxKg)}kg`)
+        Text(this.getWeightRangeText())
           .fontSize(15)
           .fontColor('#6D7784')
           .layoutWeight(1)
@@ -805,14 +987,73 @@ export struct HealthPage {
     .width(Const.FULL_WIDTH)
   }
 
+  @Builder WaterHistoryCard() {
+    Column() {
+      Row() {
+        Text('喝水')
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#182431')
+          .layoutWeight(1)
+        Button('+150ml')
+          .fontSize(13)
+          .fontColor('#6E54D9')
+          .height(30)
+          .padding({ left: 10, right: 10 })
+          .backgroundColor('#F0ECFF')
+          .borderRadius(15)
+          .onClick(() => {
+            this.addWater(150);
+          })
+      }
+      .width(Const.FULL_WIDTH)
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: 5 }) {
+        ForEach([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], (item: number) => {
+          Blank()
+            .width(8)
+            .height(item * 10 <= this.getWaterPercent() ? 30 : 18)
+            .backgroundColor(item * 10 <= this.getWaterPercent() ? '#6ACFE3' : '#EAF7FA')
+            .borderRadius(4)
+        }, (item: number) => item.toString())
+      }
+      .height(38)
+      .alignItems(VerticalAlign.Bottom)
+      .margin({ top: 22 })
+
+      Row() {
+        Text(`${this.healthData.waterMl}ml`)
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#182431')
+        Text(` / ${this.healthData.waterGoalMl}ml`)
+          .fontSize(16)
+          .fontColor('#6D7784')
+      }
+      .width(Const.FULL_WIDTH)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .margin({ top: 10 })
+    }
+    .width(Const.FULL_WIDTH)
+    .padding(18)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(8)
+  }
+
   build() {
     Scroll() {
       Column({ space: 12 }) {
         this.Header()
         this.DietCard()
         this.WeightCard()
-        this.WatchCard()
-        this.MoodAndWaterRow()
+        if (this.isSelectedToday()) {
+          this.WatchCard()
+          this.MoodAndWaterRow()
+        } else {
+          this.WaterHistoryCard()
+        }
       }
       .width(Const.FULL_WIDTH)
       .padding({ left: 12, right: 12, bottom: 24 })

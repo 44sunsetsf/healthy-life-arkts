@@ -211,6 +211,26 @@
     {
       "name": "internet_reason",
       "value": "Used for AI assistant network requests"
+    },
+    {
+      "name": "achievement_tab_full",
+      "value": "健康全勤"
+    },
+    {
+      "name": "achievement_tab_task",
+      "value": "任务达成"
+    },
+    {
+      "name": "achievement_tab_over",
+      "value": "超额成就"
+    },
+    {
+      "name": "full_attendance_level",
+      "value": "连续%d天全勤"
+    },
+    {
+      "name": "trophy_full_title",
+      "value": "全勤成长奖杯"
     }
   ]
 }
