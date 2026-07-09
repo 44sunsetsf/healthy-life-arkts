@@ -29,6 +29,10 @@
       "value": "Used to publish/cancel task reminders"
     },
     {
+      "name": "task_run",
+      "value": "Run one kilometer"
+    },
+    {
       "name": "empty",
       "value": "empty"
     }
