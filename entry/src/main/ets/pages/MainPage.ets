@@ -75,6 +75,8 @@ struct Index {
         this.homeStore = new HomeStore(new Date());
       }
       this.checkCurrentTime();
+    } else if (this.homeStore.dateArr.length === 0) {
+      this.checkCurrentTime();
     }
   }
 

@@ -327,57 +327,53 @@ export default struct HomeIndex {
 
   build() {
     Stack() {
-      Scroll(this.scroller) {
-        Column() {
-          HomeTopView({ homeStore: this.homeStore })
-          Text($r('app.string.task_list')).titleTextStyle()
-          if (this.homeStore.getTaskListOfDay().length > 0) {
-            List({ space: Const.DEFAULT_8 }) {
-              ForEach(this.homeStore.getTaskListOfDay(), (item: TaskInfo) => {
-                ListItem() {
-                  TaskCard({
-                    taskInfoStr: JSON.stringify(item),
-                    clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
-                  })
-                }
-                .height($r('app.float.default_88'))
-                .swipeAction({
-                  end: {
-                    builder: () => {
-                      this.swipeEndBuilder(item);
-                    },
-                    actionAreaDistance: 112
-                  }
+      Column() {
+        HomeTopView({ homeStore: this.homeStore })
+        Text($r('app.string.task_list')).titleTextStyle()
+        if (this.homeStore.getTaskListOfDay().length > 0) {
+          List({ space: Const.DEFAULT_8, scroller: this.scroller }) {
+            ForEach(this.homeStore.getTaskListOfDay(), (item: TaskInfo) => {
+              ListItem() {
+                TaskCard({
+                  taskInfoStr: JSON.stringify(item),
+                  clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
                 })
-              }, (item: TaskInfo) => JSON.stringify(item))
-            }
-            .onAppear(() => {
-              this.scroller.scrollTo({ xOffset: 0, yOffset: this.yOffset });
-            })
-            .padding({
-              top: Const.THOUSANDTH_15,
-              left: Const.THOUSANDTH_33,
-              right: Const.THOUSANDTH_33
-            })
-            .width(Const.THOUSANDTH_1000)
-          } else {
-            Column({ space: Const.DEFAULT_8 }) {
-              Image($r('app.media.ic_no_data'))
-                .width($r('app.float.default_132'))
-                .height($r('app.float.default_100'));
-              HealthText({ title: '', titleResource: $r('app.string.no_task'), fontSize: $r('app.float.default_14') })
-                .opacity(Const.OPACITY_4)
-            }
-            .margin({ top: Const.DEFAULT_48 })
+              }
+              .height($r('app.float.default_88'))
+              .swipeAction({
+                end: {
+                  builder: () => {
+                    this.swipeEndBuilder(item);
+                  },
+                  actionAreaDistance: 112
+                }
+              })
+            }, (item: TaskInfo) => JSON.stringify(item))
           }
+          .onAppear(() => {
+            this.scroller.scrollTo({ xOffset: 0, yOffset: this.yOffset });
+          })
+          .padding({
+            left: Const.THOUSANDTH_33,
+            right: Const.THOUSANDTH_33
+          })
+          .layoutWeight(1)
+          .edgeEffect(EdgeEffect.Spring)
+          .onScroll(() => {
+            this.onScrollAction()
+          })
+        } else {
+          Column({ space: Const.DEFAULT_8 }) {
+            Image($r('app.media.ic_no_data'))
+              .width($r('app.float.default_132'))
+              .height($r('app.float.default_100'));
+            HealthText({ title: '', titleResource: $r('app.string.no_task'), fontSize: $r('app.float.default_14') })
+              .opacity(Const.OPACITY_4)
+          }
+          .margin({ top: Const.DEFAULT_48 })
+          .layoutWeight(1)
         }
       }
-      .scrollBar(BarState.Off)
-      .allSize()
-      .onScroll(() => {
-        this.onScrollAction()
-      })
-      .align(Alignment.TopStart)
 
       AddBtn({ clickAction: () => {
         this.editTaskAction()
