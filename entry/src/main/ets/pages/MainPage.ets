@@ -28,6 +28,11 @@ import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { GlobalContext } from '../common/utils/GlobalContext';
 import { AiChatPage } from '../ai/pages/AiChatPage';
+import { HealthPage } from '../health/pages/HealthPage';
+
+class MainPageRouterParams {
+  editTask: string = '';
+}
 
 @Styles function allSize() {
   .width(Const.THOUSANDTH_1000)
@@ -38,7 +43,7 @@ import { AiChatPage } from '../ai/pages/AiChatPage';
 @Component
 struct Index {
   @State currentPage: number = 0;
-  @State editedTaskInfo: ITaskItem = router.getParams() ? (router.getParams() as Record<string, Object>).editTask as ITaskItem : {} as ITaskItem;
+  @State editedTaskInfo: ITaskItem = {} as ITaskItem;
   @State editedTaskID: string = '0';
   @State homeStore: HomeStore = new HomeStore(new Date());
   private tabController: TabsController = new TabsController();
@@ -49,16 +54,19 @@ struct Index {
     });
     notificationManager.requestEnableNotification().then(() => {
       Logger.info('onPageShow', `requestEnableNotification success`);
-    }).catch((err: Error) => {
-      Logger.error('onPageShow', `requestEnableNotification failed, message is ${err.message}`);
+    }).catch(() => {
+      Logger.error('onPageShow', `requestEnableNotification failed`);
     });
   }
 
   onPageShow() {
     Logger.info('onPageShow', JSON.stringify(router.getParams()));
-    let params = (router.getParams() ? router.getParams() : {}) as Record<string, Object>;
-    let result = params.editTask ? params.editTask as string : '{}';
-    this.editedTaskInfo = JSON.parse(result);
+    let result = '{}';
+    if (router.getParams()) {
+      let params = router.getParams() as MainPageRouterParams;
+      result = params.editTask ? params.editTask : '{}';
+    }
+    this.editedTaskInfo = JSON.parse(result) as ITaskItem;
     this.editedTaskID = JSON.stringify(this.editedTaskInfo);
     if ((GlobalContext.getContext().getObject('isForeground') as boolean)) {
       GlobalContext.getContext().setObject('isForeground', false);
@@ -123,6 +131,11 @@ struct Index {
       }
       .tabBar(this.TabBuilder(TabId.HOME))
       .align(Alignment.Start)
+
+      TabContent() {
+        HealthPage()
+      }
+      .tabBar(this.TabBuilder(TabId.HEALTH))
 
       TabContent() {
         AchievementIndex()

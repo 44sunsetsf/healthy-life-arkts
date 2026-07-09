@@ -16,6 +16,7 @@ class HttpRequestConfig {
   method: http.RequestMethod = http.RequestMethod.POST;
   header: HttpHeader = new HttpHeader();
   extraData: string = '';
+  expectDataType: http.HttpDataType = http.HttpDataType.STRING;
   connectTimeout: number = 30000;
   readTimeout: number = 60000;
 }
