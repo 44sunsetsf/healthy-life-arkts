@@ -131,7 +131,7 @@ export default struct HomeIndex {
                   clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
                 })
                   .margin({ bottom: Const.DEFAULT_12 })
-                  .height($r('app.float.default_64'))
+                  .height($r('app.float.default_88'))
               }, (item: TaskInfo) => JSON.stringify(item))
             }
             .onAppear(() => {
