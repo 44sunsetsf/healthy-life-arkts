@@ -29,6 +29,12 @@ import GlobalInfo from './GlobalInfo';
 import WeekCalendarInfo from './WeekCalendarInfo';
 import AchievementInfo from './AchievementInfo';
 
+export class ExpResult {
+  expGained: number = 0;
+  oldLevel: number = 0;
+  newLevel: number = 0;
+}
+
 @Observed
 export class HomeStore {
   public currentDate: Date;
@@ -211,6 +217,9 @@ export class HomeStore {
     return [];
   }
 
+  static readonly EXP_PER_CLOCK: number = 20;
+  static readonly EXP_PER_LEVEL: number = 100;
+
   public async taskClock(taskInfo: TaskInfo) {
     let taskItem = await this.updateTask(taskInfo);
     let dateStr = this.selectedDayInfo?.dateStr;
@@ -225,7 +234,14 @@ export class HomeStore {
       return item.taskID === taskItem?.taskID ? taskItem : item;
     });
     let achievementLevel: number = 0;
+    let expGained: number = 0;
+    let oldLevel: number = 0;
+    let newLevel: number = 0;
     if (taskItem.isDone) {
+      let expResult = await this.addExperience(HomeStore.EXP_PER_CLOCK);
+      expGained = expResult.expGained;
+      oldLevel = expResult.oldLevel;
+      newLevel = expResult.newLevel;
       let dayInfo = await this.updateDayInfo();
       if (dayInfo && dayInfo?.finTaskNum === dayInfo?.targetTaskNum) {
         achievementLevel = await this.updateAchievement(this.selectedDayInfo.dayInfo);
@@ -234,7 +250,11 @@ export class HomeStore {
     this.dateArr = this.dateArr.map((item: WeekDateModel) => dateStr === item.dateStr ? this.selectedDayInfo : item);
     return {
       achievementLevel: achievementLevel,
-      showAchievement: ACHIEVEMENT_LEVEL_LIST.includes(achievementLevel)
+      showAchievement: ACHIEVEMENT_LEVEL_LIST.includes(achievementLevel),
+      expGained: expGained,
+      oldLevel: oldLevel,
+      newLevel: newLevel,
+      isLevelUp: newLevel > oldLevel
     } as AchievementInfo;
   }
 
@@ -315,5 +335,38 @@ export class HomeStore {
         });
       })
     });
+  }
+
+  addExperience(exp: number): Promise<ExpResult> {
+    return new Promise((resolve, reject) => {
+      GlobalInfoApi.query((res: GlobalInfo) => {
+        let oldExp = res.experience;
+        let oldLevel = HomeStore.getLevel(oldExp);
+        res.experience += exp;
+        GlobalInfoApi.updateData(res, (flag: number) => {
+          if (flag) {
+            let newLevel = HomeStore.getLevel(res.experience);
+            AppStorage.SetOrCreate('experienceOld', oldExp);
+            AppStorage.SetOrCreate('experienceNew', res.experience);
+            AppStorage.SetOrCreate('experienceCurrent', res.experience);
+            let result = new ExpResult();
+            result.expGained = exp;
+            result.oldLevel = oldLevel;
+            result.newLevel = newLevel;
+            resolve(result);
+          } else {
+            reject(flag);
+          }
+        });
+      });
+    });
+  }
+
+  static getLevel(experience: number): number {
+    return Math.floor(experience / HomeStore.EXP_PER_LEVEL) + 1;
+  }
+
+  static getLevelExp(experience: number): number {
+    return experience % HomeStore.EXP_PER_LEVEL;
   }
 }

@@ -26,11 +26,13 @@ export default class GlobalInfo {
     lastDate: string;
     checkInDays: number;
     achievements: string;
+    experience: number;
 
-    constructor(firstDate: string, lastDate: string, checkInDays: number, achievements: string) {
+    constructor(firstDate: string, lastDate: string, checkInDays: number, achievements: string, experience: number = 0) {
         this.firstDate = firstDate;
         this.lastDate = lastDate;
         this.checkInDays = checkInDays;
         this.achievements = achievements;
+        this.experience = experience;
     }
 }
