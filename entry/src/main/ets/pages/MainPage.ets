@@ -27,6 +27,7 @@ import { HomeStore } from '../viewmodel/HomeViewModel';
 import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { GlobalContext } from '../common/utils/GlobalContext';
+import { AiChatPage } from '../ai/pages/AiChatPage';
 
 @Styles function allSize() {
   .width(Const.THOUSANDTH_1000)
@@ -43,6 +44,9 @@ struct Index {
   private tabController: TabsController = new TabsController();
 
   aboutToAppear() {
+    GlobalContext.getContext().setObject('switchToAiTab', () => {
+      this.tabController.changeIndex(TabId.AI);
+    });
     notificationManager.requestEnableNotification().then(() => {
       Logger.info('onPageShow', `requestEnableNotification success`);
     }).catch((err: Error) => {
@@ -124,6 +128,11 @@ struct Index {
         AchievementIndex()
       }
       .tabBar(this.TabBuilder(TabId.ACHIEVEMENT))
+
+      TabContent() {
+        AiChatPage()
+      }
+      .tabBar(this.TabBuilder(TabId.AI))
 
       TabContent() {
         MineIndex()

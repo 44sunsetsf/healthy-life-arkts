@@ -199,6 +199,14 @@
     {
       "name": "empty",
       "value": "empty"
+    },
+    {
+      "name": "tab_ai",
+      "value": "AI助手"
+    },
+    {
+      "name": "internet_reason",
+      "value": "Used for AI assistant network requests"
     }
   ]
 }

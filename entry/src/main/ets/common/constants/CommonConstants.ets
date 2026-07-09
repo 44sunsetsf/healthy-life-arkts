@@ -65,6 +65,12 @@ export class CommonConstants {
     columns: ['id', 'username', 'nickname', 'password', 'experience', 'isMe']
   } as CommonConstantsInfo
 
+  /** chat message table */
+  static readonly CHAT_MSG = {
+    tableName: 'chatMsg',
+    columns: ['id', 'role', 'content', 'timestamp']
+  } as CommonConstantsInfo
+
   // TaskNum
   static readonly TASK_NUM = 6;
 

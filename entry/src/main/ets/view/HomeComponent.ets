@@ -16,6 +16,7 @@
 import router from '@ohos.router';
 import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
+import { AiFloatBtn } from '../ai/view/AiFloatBtn';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
@@ -27,6 +28,9 @@ import { HealthDataSrcMgr } from '../common/utils/HealthDataSrcMgr';
 import { BroadCast, BroadCastType } from '../common/utils/BroadCast';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import AchievementInfo from '../viewmodel/AchievementInfo';
+import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
+import { dateToStr } from '../common/utils/Utils';
+import Logger from '../common/utils/Logger';
 
 const WHITE_COLOR_0X = 255;
 
@@ -42,7 +46,7 @@ function titleTextStyle() {
   .fontWeight(Const.FONT_WEIGHT_500)
   .width(Const.THOUSANDTH_1000)
   .fontFamily($r('app.string.HarmonyHeiTi_Medium'))
-  .fontColor($r(`app.element.color.titleColor`))
+  .fontColor($r('app.color.titleColor'))
   .padding({
     top: Const.THOUSANDTH_15,
     bottom: Const.THOUSANDTH_15,
@@ -73,23 +77,72 @@ export default struct HomeIndex {
       return;
     }
     if (isClick) {
-      // click to clock
       let callback: CustomDialogCallback = { confirmCallback: (taskTemp: TaskInfo) => {
         this.onConfirm(taskTemp)
       }, cancelCallback: () => {
       } };
       this.broadCast.emit(BroadCastType.SHOW_TASK_DETAIL_DIALOG, [item, callback]);
-    } else {
-      // edit task
-      let editTaskStr: string = JSON.stringify(TaskMapById[item.taskID - 1]);
-      let editTask: ITaskItem = JSON.parse(editTaskStr);
-      editTask.targetValue = item?.targetValue;
-      editTask.isAlarm = item.isAlarm;
-      editTask.startTime = item.startTime;
-      editTask.frequency = item.frequency;
-      editTask.isOpen = item.isOpen;
-      router.pushUrl({ url: 'pages/TaskEditPage', params: { params: JSON.stringify(editTask) } });
     }
+  }
+
+  @Builder swipeEndBuilder(item: TaskInfo) {
+    Row() {
+      Row() {
+        Text('设置')
+          .fontSize(14)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor($r('app.color.blueColor'))
+      .onClick(() => {
+        let editTaskStr: string = JSON.stringify(TaskMapById[item.taskID - 1]);
+        let editTask: ITaskItem = JSON.parse(editTaskStr);
+        editTask.targetValue = item.targetValue;
+        editTask.isAlarm = item.isAlarm;
+        editTask.startTime = item.startTime;
+        editTask.frequency = item.frequency;
+        editTask.isOpen = item.isOpen;
+        router.pushUrl({ url: 'pages/TaskEditPage', params: { params: JSON.stringify(editTask) } });
+      })
+
+      Row() {
+        Text('删除')
+          .fontSize(14)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor($r('app.color.primaryRed'))
+      .onClick(() => {
+        this.deleteTask(item);
+      })
+    }
+    .height('100%')
+  }
+
+  deleteTask(item: TaskInfo) {
+    let dateStr = item.date || dateToStr(new Date());
+    let deleteInfo = new TaskInfo(item.id, dateStr, item.taskID, item.targetValue,
+      item.isAlarm, item.startTime, item.endTime, item.frequency, item.isDone,
+      item.finValue, false);
+    TaskInfoTableApi.deleteDataByID(deleteInfo, (res: number) => {
+      Logger.info('deleteTask', 'Delete result: ' + res);
+      this.homeStore.dateArr = this.homeStore.dateArr.map((weekItem) => {
+        if (weekItem.dateStr === dateStr) {
+          weekItem.taskList = weekItem.taskList.filter((taskItem: TaskInfo) => taskItem.taskID !== item.taskID);
+          if (this.homeStore.checkCurrentDay()) {
+            this.homeStore.selectedDayInfo = weekItem;
+          }
+          return weekItem;
+        }
+        return weekItem;
+      }).slice(0);
+    });
   }
 
   //confirm clockL
@@ -139,14 +192,23 @@ export default struct HomeIndex {
           HomeTopView({ homeStore: $homeStore })
           Text($r('app.string.task_list')).titleTextStyle()
           if (this.homeStore.getTaskListOfDay().length > 0) {
-            Column({ space: Const.DEFAULT_8 }) {
+            List({ space: Const.DEFAULT_8 }) {
               ForEach(this.homeStore.getTaskListOfDay(), (item: TaskInfo) => {
-                TaskCard({
-                  taskInfoStr: JSON.stringify(item),
-                  clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
+                ListItem() {
+                  TaskCard({
+                    taskInfoStr: JSON.stringify(item),
+                    clickAction: (isClick: boolean) => this.taskItemAction(item, isClick)
+                  })
+                }
+                .height($r('app.float.default_88'))
+                .swipeAction({
+                  end: {
+                    builder: () => {
+                      this.swipeEndBuilder(item);
+                    },
+                    actionAreaDistance: 112
+                  }
                 })
-                  .margin({ bottom: Const.DEFAULT_12 })
-                  .height($r('app.float.default_88'))
               }, (item: TaskInfo) => JSON.stringify(item))
             }
             .onAppear(() => {
@@ -180,6 +242,9 @@ export default struct HomeIndex {
       AddBtn({ clickAction: () => {
         this.editTaskAction()
       } })
+
+      AiFloatBtn()
+
       Row() {
         Text($r('app.string.EntryAbility_label'))
           .titleTextStyle()
@@ -189,7 +254,7 @@ export default struct HomeIndex {
       .width(Const.THOUSANDTH_1000)
       .height(Const.DEFAULT_56)
       .position({ x: 0, y: 0 })
-      .backgroundColor(`rgba(${WHITE_COLOR_0X},${WHITE_COLOR_0X},${WHITE_COLOR_0X},${this.naviAlpha})`)
+      .backgroundColor('rgba(' + WHITE_COLOR_0X + ',' + WHITE_COLOR_0X + ',' + WHITE_COLOR_0X + ',' + this.naviAlpha + ')')
 
       CustomDialogView()
 

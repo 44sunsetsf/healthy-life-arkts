@@ -72,3 +72,10 @@ export const columnFriendInfoList: Array<ColumnInfo> = [
   new ColumnInfo('isMe', 'integer', -1, true, false, false)
 ];
 
+export const columnChatMsgList: Array<ColumnInfo> = [
+  new ColumnInfo('id', 'integer', -1, false, true, true),
+  new ColumnInfo('role', 'text', -1, false, false, false),
+  new ColumnInfo('content', 'text', -1, false, false, false),
+  new ColumnInfo('timestamp', 'integer', -1, false, false, false)
+];
+

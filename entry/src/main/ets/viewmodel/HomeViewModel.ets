@@ -150,6 +150,13 @@ export class HomeStore {
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
+            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
+              if (!res) {
+                TaskInfoTableApi.insertData(task, (insertRes: number) => {
+                  Logger.info('updateTaskInfoList', `Insert task ${taskID} for ${task.date}, result: ${insertRes}`);
+                });
+              }
+            });
             let count: number = 0;
             taskList.forEach((taskItem: TaskInfo) => {
               if (taskItem.isDone) {
@@ -164,6 +171,9 @@ export class HomeStore {
             let taskIndex = taskList.findIndex((taskItem) => taskItem.taskID === taskID);
             Logger.info('taskList[taskIndex]', JSON.stringify(taskList[taskIndex]));
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
+            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
+              Logger.info('updateTaskInfoList', `Disable task ${taskID} for ${task.date}, result: ${res}`);
+            });
           }
           dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
           if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {

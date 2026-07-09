@@ -49,7 +49,7 @@ export struct TaskCard {
           title: this.taskInfo.finValue || `--`,
           fontSize: $r('app.float.default_24')
         })
-        Text(` / ${this.taskInfo.targetValue} ${TaskMapById[this.taskInfo.taskID - 1].unit}`)
+        Text(' / ' + this.taskInfo.targetValue + ' ' + TaskMapById[this.taskInfo.taskID - 1].unit)
           .labelTextStyle()
           .fontWeight(Const.FONT_WEIGHT_400)
       }
@@ -106,6 +106,5 @@ export struct TaskCard {
     .padding({ left: Const.THOUSANDTH_50, right: Const.THOUSANDTH_33 })
     .backgroundColor($r('app.color.white'))
     .onClick(() => this.clickAction(true))
-    .gesture(LongPressGesture().onAction(() => this.clickAction(false)))
   }
 }
