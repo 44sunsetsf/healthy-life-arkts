@@ -64,16 +64,18 @@ ${healthContext}
 
     try {
       const startTime = Date.now();
-      const response = await httpRequest.request(this.apiUrl, {
+      const requestOptions: http.HttpRequestOptions = {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
-        body: requestBody,
+        extraData: requestBody,
+        expectDataType: http.HttpDataType.STRING,
         connectTimeout: 30000,
         readTimeout: 60000
-      });
+      };
+      const response: http.HttpResponse = await httpRequest.request(this.apiUrl, requestOptions);
 
       const elapsed = Date.now() - startTime;
       httpRequest.destroy();
@@ -92,10 +94,10 @@ ${healthContext}
 
       Logger.error(TAG, `sendMessage failed: responseCode=${response.responseCode}`);
       return `[错误] API 返回状态码: ${response.responseCode}`;
-    } catch (err) {
+    } catch {
       httpRequest.destroy();
-      Logger.error(TAG, `sendMessage exception: ${JSON.stringify(err)}`);
-      return `[错误] 网络请求失败: ${JSON.stringify(err)}`;
+      Logger.error(TAG, `sendMessage exception`);
+      return `[错误] 网络请求失败`;
     }
   }
 }
