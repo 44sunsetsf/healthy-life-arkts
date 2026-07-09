@@ -1,53 +1,79 @@
-/*
- * Copyright (c) 2023 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { CommonConstants as Const } from '../../common/constants/CommonConstants';
 
-/**
- * 成就页通用文本弹窗：奖章详情 / 成长奖杯等级 / 规则说明
- */
 @CustomDialog
 export struct AchievementInfoDialog {
   controller: CustomDialogController = new CustomDialogController({ builder: '' });
   @Link dialogTitle: string;
   @Link dialogContent: string;
+  @Link dialogIcon: Resource;
+  @State rotateAngle: number = 0;
+  @State iconScale: number = 0.3;
+
+  aboutToAppear() {
+    setTimeout(() => {
+      this.iconScale = 1;
+      this.rotateAngle = 360;
+    }, 50);
+  }
 
   build() {
-    Column({ space: Const.DEFAULT_16 }) {
+    Column() {
+      Column() {
+        Image(this.dialogIcon)
+          .width(100)
+          .height(100)
+          .objectFit(ImageFit.Contain)
+          .rotate({
+            x: 0,
+            y: 1,
+            z: 0,
+            angle: this.rotateAngle,
+            centerX: '50%',
+            centerY: '50%',
+            perspective: 800
+          })
+          .scale({ x: this.iconScale, y: this.iconScale, centerX: '50%', centerY: '50%' })
+          .animation({
+            duration: 800,
+            curve: Curve.EaseOut,
+            playMode: PlayMode.Normal
+          })
+      }
+      .width(Const.FULL_WIDTH)
+      .height(110)
+      .justifyContent(FlexAlign.Center)
+
       Text(this.dialogTitle)
         .fontSize($r('app.float.default_18'))
         .fontWeight(Const.FONT_WEIGHT_500)
-        .fontColor($r('app.color.titleColor'))
+        .fontColor('#3E2723')
+        .margin({ top: Const.DEFAULT_8 })
+
       Text(this.dialogContent)
         .fontSize($r('app.float.default_14'))
-        .fontColor('#666666')
+        .fontColor('#5D4037')
         .lineHeight(22)
+        .margin({ top: Const.DEFAULT_8 })
+        .width(Const.FULL_WIDTH)
+
       Button('知道了')
         .fontSize($r('app.float.default_14'))
         .height(36)
         .width(Const.FULL_WIDTH)
-        .backgroundColor('#F2F2F2')
-        .fontColor($r('app.color.titleColor'))
+        .backgroundColor('rgba(62,39,35,0.15)')
+        .fontColor('#3E2723')
+        .margin({ top: Const.DEFAULT_12 })
         .onClick(() => {
           this.controller.close();
         })
     }
     .alignItems(HorizontalAlign.Start)
-    .padding(Const.DEFAULT_24)
+    .padding(Const.DEFAULT_16)
     .width('82%')
     .borderRadius(Const.DEFAULT_16)
-    .backgroundColor('#FFFFFF')
+    .linearGradient({
+      angle: 135,
+      colors: [['#FFF8E1', 0], ['#FFE082', 0.4], ['#FFB74D', 0.8], ['#FF8A65', 1]]
+    })
   }
 }

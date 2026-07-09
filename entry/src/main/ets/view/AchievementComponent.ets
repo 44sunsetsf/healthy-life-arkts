@@ -14,7 +14,6 @@
  */
 
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
-import { TitleBar } from './TitleBarComponent';
 import { AchievementMap, TaskMapById } from '../model/TaskInitList';
 import { getAchievementLevel, ACHIEVEMENT_LEVEL_KEY } from '../model/AchieveModel';
 import { AchievementInfoDialog } from './dialog/AchievementInfoDialog';
@@ -35,6 +34,8 @@ import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { ratio2percent, padTo2Digits } from '../common/utils/Utils';
 import Logger from '../common/utils/Logger';
+import { seedAchievementData, clearAchievementData } from '../model/AchievementSeedData';
+import prompt from '@ohos.prompt';
 
 const SUB_TEXT_COLOR: string = '#999999';
 const CARD_BG_COLOR: string = '#FFFFFF';
@@ -68,8 +69,13 @@ export struct AchievementIndex {
   @State percentRecords: PercentRecordInfo[] = [];
   @State dialogTitle: string = '';
   @State dialogContent: string = '';
+  @State dialogIcon: Resource = $r('app.media.achievement_trophy_off');
   infoDialog: CustomDialogController = new CustomDialogController({
-    builder: AchievementInfoDialog({ dialogTitle: $dialogTitle, dialogContent: $dialogContent }),
+    builder: AchievementInfoDialog({
+      dialogTitle: $dialogTitle,
+      dialogContent: $dialogContent,
+      dialogIcon: $dialogIcon
+    }),
     autoCancel: true,
     customStyle: true
   });
@@ -117,12 +123,12 @@ export struct AchievementIndex {
   }
 
   getVisibleTaskStats(): TaskAchievementStats[] {
-    return this.taskStatsList.filter((stats: TaskAchievementStats) => stats.hasAnyRecord);
+    return this.taskStatsList;
   }
 
   getOverTaskStats(): TaskAchievementStats[] {
     return this.taskStatsList.filter((stats: TaskAchievementStats) =>
-      stats.hasAnyRecord && OVER_ACHIEVE_TASK_IDS.indexOf(stats.taskID) >= 0);
+      OVER_ACHIEVE_TASK_IDS.indexOf(stats.taskID) >= 0);
   }
 
   getUnitText(stats: TaskAchievementStats): string {
@@ -216,61 +222,67 @@ export struct AchievementIndex {
     return content;
   }
 
-  openDialog(title: string, content: string): void {
+  openDialog(title: string, content: string, icon: Resource): void {
     this.dialogTitle = title;
     this.dialogContent = content;
+    this.dialogIcon = icon;
     this.infoDialog.open();
   }
 
   showMilestoneDialog(milestone: number): void {
     let lit = this.successiveDays >= milestone;
     let title = `连续${milestone}天全勤`;
+    let icon = this.getBadgeIcon(milestone, lit);
     if (lit) {
       this.openDialog(title,
-        `达成条件：\n连续${milestone}天完成今日全部任务。\n\n当前状态：已点亮\n当前连续全勤：${this.checkInDays} 天`);
+        `达成条件：\n连续${milestone}天完成今日全部任务。\n\n当前状态：已点亮\n当前连续全勤：${this.checkInDays} 天`, icon);
     } else {
       let progress = Math.min(this.checkInDays, milestone);
       this.openDialog(title,
-        `达成条件：\n连续${milestone}天完成今日全部任务。\n\n当前进度：${progress} / ${milestone}\n还差：${milestone - progress} 天`);
+        `达成条件：\n连续${milestone}天完成今日全部任务。\n\n当前进度：${progress} / ${milestone}\n还差：${milestone - progress} 天`, icon);
     }
   }
 
   showFullTrophyDialog(): void {
+    let icon = getTrophyIcon(getTrophyLevel(this.checkInDays));
     this.openDialog('全勤成长奖杯',
-      `完成今日全部任务，才计入 1 天健康全勤。\n\n${this.buildTrophyDialogContent(this.checkInDays, UNIT_DAY)}`);
+      `完成今日全部任务，才计入 1 天健康全勤。\n\n${this.buildTrophyDialogContent(this.checkInDays, UNIT_DAY)}`, icon);
   }
 
   showTaskMilestoneDialog(stats: TaskAchievementStats, milestone: number): void {
     let name = TASK_NAMES[stats.taskID];
     let unit = this.getUnitText(stats);
     let title = `${name}连续 ${milestone} ${unit}达成`;
+    let icon = this.getBadgeIcon(milestone, stats.streak >= milestone);
     if (stats.streak >= milestone) {
       this.openDialog(title,
-        `达成条件：\n${name}任务连续 ${milestone} 个执行日达到目标。\n\n当前状态：已点亮\n当前连续达成：${stats.streak} ${unit}`);
+        `达成条件：\n${name}任务连续 ${milestone} 个执行日达到目标。\n\n当前状态：已点亮\n当前连续达成：${stats.streak} ${unit}`, icon);
     } else {
       this.openDialog(title,
-        `达成条件：\n${name}任务连续 ${milestone} 个执行日达到目标。\n\n当前进度：${stats.streak} / ${milestone}\n还差：${milestone - stats.streak} ${unit}`);
+        `达成条件：\n${name}任务连续 ${milestone} 个执行日达到目标。\n\n当前进度：${stats.streak} / ${milestone}\n还差：${milestone - stats.streak} ${unit}`, icon);
     }
   }
 
   showTaskTrophyDialog(stats: TaskAchievementStats): void {
     let name = TASK_NAMES[stats.taskID];
-    this.openDialog(`${name}成长奖杯`, this.buildTrophyDialogContent(stats.streak, this.getUnitText(stats)));
+    let icon = getTrophyIcon(getTrophyLevel(stats.streak));
+    this.openDialog(`${name}成长奖杯`, this.buildTrophyDialogContent(stats.streak, this.getUnitText(stats)), icon);
   }
 
   showPercentDialog(stats: TaskAchievementStats, percent: number): void {
     let name = TASK_NAMES[stats.taskID];
     let unit = this.getTaskUnit(stats.taskID);
     let title = `${name} ${percent}% 达成`;
+    let icon = getPercentIcon(percent, percent <= this.getMaxPercent(stats));
     let record = this.findPercentRecord(stats, percent);
     if (record !== null) {
       this.openDialog(title,
         `首次达成：${this.formatDateStr(record.firstDate)}\n当日目标：${record.targetValue} ${unit}\n` +
-        `实际完成：${record.finValue} ${unit}\n完成比例：${percent}%`);
+        `实际完成：${record.finValue} ${unit}\n完成比例：${percent}%`, icon);
     } else if (percent <= this.getMaxPercent(stats)) {
-      this.openDialog(title, `达成条件：\n单日${name}完成量达到目标的 ${percent}%。\n\n当前状态：已点亮`);
+      this.openDialog(title, `达成条件：\n单日${name}完成量达到目标的 ${percent}%。\n\n当前状态：已点亮`, icon);
     } else {
-      this.openDialog(title, `达成条件：\n单日${name}完成量达到目标的 ${percent}%。\n\n当前状态：未点亮`);
+      this.openDialog(title, `达成条件：\n单日${name}完成量达到目标的 ${percent}%。\n\n当前状态：未点亮`, icon);
     }
   }
 
@@ -301,7 +313,7 @@ export struct AchievementIndex {
       Text('ⓘ')
         .fontSize($r('app.float.default_14'))
         .fontColor(SUB_TEXT_COLOR)
-        .onClick(() => this.openDialog(ruleTitle, ruleContent))
+        .onClick(() => this.openDialog(ruleTitle, ruleContent, $r('app.media.achievement_trophy_off')))
     }
     .width(Const.FULL_WIDTH)
     .padding({ left: Const.ACHIEVE_TITLE_BAR_LEFT, right: Const.ACHIEVE_TITLE_BAR_LEFT, top: Const.DEFAULT_12 })
@@ -495,9 +507,73 @@ export struct AchievementIndex {
     .padding({ left: Const.DEFAULT_10, right: Const.DEFAULT_10, top: Const.DEFAULT_12 })
   }
 
+  tapCount: number = 0;
+  lastTapTime: number = 0;
+  readonly DEV_TAP_THRESHOLD: number = 5;
+  readonly DEV_TAP_INTERVAL: number = 1000;
+
+  tryOpenDevMenu(): void {
+    let now = Date.now();
+    if (now - this.lastTapTime > this.DEV_TAP_INTERVAL) {
+      this.tapCount = 1;
+    } else {
+      this.tapCount += 1;
+    }
+    this.lastTapTime = now;
+    if (this.tapCount >= this.DEV_TAP_THRESHOLD) {
+      this.tapCount = 0;
+      AlertDialog.show({
+        title: '开发者工具',
+        message: '选择操作（数据变更后需重启应用生效）',
+        primaryButton: {
+          value: '填充满级数据',
+          action: () => {
+            this.doSeedData();
+          }
+        },
+        secondaryButton: {
+          value: '清除所有数据',
+          action: () => {
+            this.doClearData();
+          }
+        }
+      });
+    }
+  }
+
+  doSeedData(): void {
+    seedAchievementData(getContext(this), (ok: boolean) => {
+      if (ok) {
+        prompt.showToast({ message: '测试数据已填充，请重启应用' });
+      } else {
+        prompt.showToast({ message: '填充失败' });
+      }
+    });
+  }
+
+  doClearData(): void {
+    clearAchievementData(getContext(this), (ok: boolean) => {
+      if (ok) {
+        prompt.showToast({ message: '数据已清除，请重启应用' });
+      } else {
+        prompt.showToast({ message: '清除失败' });
+      }
+    });
+  }
+
   build() {
     Column() {
-      TitleBar()
+      Row() {
+        Text($r('app.string.achievement'))
+          .fontSize($r('app.float.default_24'))
+          .fontColor($r('app.color.titleColor'))
+          .align(Alignment.Start)
+          .padding({ left: Const.ACHIEVE_TITLE_BAR_LEFT, top: Const.ACHIEVE_TITLE_BAR_TOP })
+      }
+      .width(Const.FULL_WIDTH)
+      .onClick(() => {
+        this.tryOpenDevMenu();
+      })
       Row({ space: Const.DEFAULT_24 }) {
         this.TabItem(0, $r('app.string.achievement_tab_full'))
         this.TabItem(1, $r('app.string.achievement_tab_task'))
