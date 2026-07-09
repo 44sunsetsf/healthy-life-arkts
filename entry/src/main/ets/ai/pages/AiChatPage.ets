@@ -443,6 +443,8 @@ export struct AiChatPage {
             Column().height(8)
           }
           .width('100%')
+          .constraintSize({ minHeight: '100%' })
+          .justifyContent(FlexAlign.Start)
           .padding({ top: 8 })
         }
         .scrollBar(BarState.Off)
@@ -451,7 +453,7 @@ export struct AiChatPage {
 
         // Input bar
         Row() {
-          TextInput({ placeholder: '输入你的问题...' })
+          TextInput({ placeholder: '输入你的问题...', text: this.inputText })
             .fontSize('14fp')
             .layoutWeight(1)
             .height(44)
