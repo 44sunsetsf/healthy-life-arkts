@@ -87,14 +87,30 @@ export struct UserBaseInfo {
         .fontColor($r('app.color.black'))
 
       Row() {
-        Text(`${this.displayExp}`)
-          .fontSize($r('app.float.default_16'))
+        Stack() {
+          Row()
+            .width('100%')
+            .height(8)
+            .borderRadius(4)
+            .backgroundColor('rgba(0,0,0,0.08)')
+          Row()
+            .width(`${this.displayExp / HomeStore.EXP_PER_LEVEL * 100}%`)
+            .height(8)
+            .borderRadius(4)
+            .backgroundColor($r('app.color.leveColor'))
+        }
+        .width('60%')
+        .alignContent(Alignment.Start)
+
+        Text(`${this.displayExp}/${HomeStore.EXP_PER_LEVEL}`)
+          .fontSize(12)
           .fontColor($r('app.color.signatureColor'))
           .fontWeight(FontWeight.Bold)
-        Text(`/${HomeStore.EXP_PER_LEVEL}经验`)
-          .fontSize($r('app.float.default_14'))
-          .fontColor($r('app.color.signatureColor'))
+          .margin({ left: 8 })
       }
+      .width('80%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
       .margin({ bottom: $r('app.float.default_6') })
 
       Text(this.signature || '暂无个性签名').fontSize($r('app.float.default_16')).fontWeight(FontWeight.Normal)

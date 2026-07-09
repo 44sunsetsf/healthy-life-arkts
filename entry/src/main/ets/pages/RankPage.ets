@@ -5,19 +5,19 @@ import UserInfoApi from '../common/database/tables/UserInfoApi';
 import UserInfo from '../viewmodel/UserInfo';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 
-interface RankItem {
-  name: string;
-  level: number;
-  experience: number;
-  isMe: boolean;
+class RankItem {
+  name: string = '';
+  level: number = 0;
+  experience: number = 0;
+  isMe: boolean = false;
 }
 
-const MOCK_FRIENDS: RankItem[] = [
-  { name: '小明', level: 8, experience: 780, isMe: false },
-  { name: '小红', level: 6, experience: 520, isMe: false },
-  { name: '小刚', level: 5, experience: 430, isMe: false },
-  { name: '小美', level: 4, experience: 310, isMe: false },
-  { name: '小强', level: 3, experience: 150, isMe: false },
+const MOCK_FRIENDS_DATA: string[][] = [
+  ['小明', '8', '780', 'false'],
+  ['小红', '6', '520', 'false'],
+  ['小刚', '5', '430', 'false'],
+  ['小美', '4', '310', 'false'],
+  ['小强', '3', '150', 'false'],
 ];
 
 @Component
@@ -34,17 +34,51 @@ export struct RankIndex {
     this.loadRankData();
   }
 
+  getRankBgColor(index: number): string {
+    if (index === 0) return 'rgba(255,215,0,0.18)';
+    if (index === 1) return 'rgba(192,192,192,0.18)';
+    if (index === 2) return 'rgba(205,127,50,0.18)';
+    return '#FFFFFF';
+  }
+
+  getRankBorderColor(index: number): string {
+    if (index === 0) return 'rgba(255,215,0,0.6)';
+    if (index === 1) return 'rgba(192,192,192,0.6)';
+    if (index === 2) return 'rgba(205,127,50,0.6)';
+    return 'rgba(0,0,0,0.05)';
+  }
+
+  getTrophyText(index: number): string {
+    if (index === 0) return '\uD83E\uDD47';
+    if (index === 1) return '\uD83E\uDD48';
+    if (index === 2) return '\uD83E\uDD49';
+    return `${index + 1}`;
+  }
+
   loadRankData() {
+    let mockFriends: RankItem[] = [];
+    for (let i = 0; i < MOCK_FRIENDS_DATA.length; i++) {
+      let item = new RankItem();
+      item.name = MOCK_FRIENDS_DATA[i][0];
+      item.level = Number(MOCK_FRIENDS_DATA[i][1]);
+      item.experience = Number(MOCK_FRIENDS_DATA[i][2]);
+      item.isMe = MOCK_FRIENDS_DATA[i][3] === 'true';
+      mockFriends.push(item);
+    }
     GlobalInfoApi.query((result: GlobalInfo) => {
       let myExp = result ? result.experience : 0;
       let myLevel = HomeStore.getLevel(myExp);
-      let meItem: RankItem = { name: '我', level: myLevel, experience: myExp, isMe: true };
+      let meItem = new RankItem();
+      meItem.name = '我';
+      meItem.level = myLevel;
+      meItem.experience = myExp;
+      meItem.isMe = true;
       UserInfoApi.query((userResult: UserInfo | null) => {
         if (userResult && userResult.nickname) {
           meItem.name = userResult.nickname;
           this.myName = userResult.nickname;
         }
-        let list = [...MOCK_FRIENDS, meItem];
+        let list = [...mockFriends, meItem];
         list.sort((a, b) => b.experience - a.experience);
         this.rankList = list;
       });
@@ -63,10 +97,10 @@ export struct RankIndex {
         ForEach(this.rankList, (item: RankItem, index: number) => {
           ListItem() {
             Row() {
-              Text(`${(index as number) + 1}`)
-                .fontSize(18)
+              Text(this.getTrophyText(index as number))
+                .fontSize((index as number) < 3 ? 24 : 18)
                 .fontWeight(FontWeight.Bold)
-                .fontColor((index as number) < 3 ? $r('app.color.blueColor') : $r('app.color.black'))
+                .fontColor($r('app.color.black'))
                 .width(36)
                 .textAlign(TextAlign.Center)
 
@@ -98,8 +132,13 @@ export struct RankIndex {
             .height(64)
             .padding({ left: 16, right: 16 })
             .alignItems(VerticalAlign.Center)
-            .backgroundColor(item.isMe ? $r('app.color.primaryBgColor') : $r('app.color.white'))
+            .backgroundColor(this.getRankBgColor(index as number))
             .borderRadius(12)
+            .border({
+              width: 1,
+              color: this.getRankBorderColor(index as number),
+              radius: 12
+            })
           }
         }, (item: RankItem, index: number) => `${index}`)
       }
