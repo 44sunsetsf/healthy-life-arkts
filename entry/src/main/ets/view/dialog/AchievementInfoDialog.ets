@@ -29,17 +29,17 @@ export struct AchievementInfoDialog {
       Text(this.dialogTitle)
         .fontSize($r('app.float.default_18'))
         .fontWeight(Const.FONT_WEIGHT_500)
-        .fontColor($r('app.color.white'))
+        .fontColor($r('app.color.titleColor'))
       Text(this.dialogContent)
         .fontSize($r('app.float.default_14'))
-        .fontColor('#CCFFFFFF')
+        .fontColor('#666666')
         .lineHeight(22)
       Button('知道了')
         .fontSize($r('app.float.default_14'))
         .height(36)
         .width(Const.FULL_WIDTH)
-        .backgroundColor('#33FFFFFF')
-        .fontColor($r('app.color.white'))
+        .backgroundColor('#F2F2F2')
+        .fontColor($r('app.color.titleColor'))
         .onClick(() => {
           this.controller.close();
         })
@@ -48,6 +48,6 @@ export struct AchievementInfoDialog {
     .padding(Const.DEFAULT_24)
     .width('82%')
     .borderRadius(Const.DEFAULT_16)
-    .backgroundColor('#2E2E38')
+    .backgroundColor('#FFFFFF')
   }
 }

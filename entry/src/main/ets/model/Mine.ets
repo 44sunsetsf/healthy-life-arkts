@@ -25,6 +25,10 @@ export const MineInfoList: InfoItem[] = [
     title: $r('app.string.mine_personal_data')
   },
   {
+    id: '4',
+    title: $r('app.string.tab_rank')
+  },
+  {
     id: '2',
     title: $r('app.string.mine_check_updates')
   },

@@ -18,8 +18,8 @@ import { isReachNewAchievement, ACHIEVEMENT_LEVEL_KEY } from '../model/AchieveMo
 import { TaskMapById, ITaskItem, ACHIEVEMENT_LEVEL_LIST } from '../model/TaskInitList';
 import TaskInfo from './TaskInfo';
 import DayInfo from './DayInfo';
-import { dateToStr, weekDateFormat } from '../common/utils/Utils';
-import { WeekDateModel, initializeOnStartUp, getPreviousWeek, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
+import { dateToStr, weekDateFormat, padTo2Digits } from '../common/utils/Utils';
+import { WeekDateModel, initializeOnStartUp, getPreviousWeek, getMonthCalendar, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
 import DatabaseApi from '../model/DatabaseModel';
 import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
 import DayInfoApi from '../common/database/tables/DayInfoApi';
@@ -27,7 +27,10 @@ import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import Logger from '../common/utils/Logger';
 import GlobalInfo from './GlobalInfo';
 import WeekCalendarInfo from './WeekCalendarInfo';
+import FriendInfoApi from '../common/database/tables/FriendInfoApi';
+import FriendInfo from './FriendInfo';
 import AchievementInfo from './AchievementInfo';
+import { GlobalContext } from '../common/utils/GlobalContext';
 
 export class ExpResult {
   expGained: number = 0;
@@ -43,6 +46,10 @@ export class HomeStore {
   public showDate: number;
   public dateTitle: string;
   public selectedDayInfo: WeekDateModel = new WeekDateModel('', '', new Date()); // task info on selected day
+  public showMonthView: boolean = false; // month calendar overlay visibility
+  public monthDateArr: Array<WeekDateModel> = []; // month calendar data source
+  public monthTitle: string = ''; // title of current month calendar
+  public monthBaseDate: Date = new Date(); // first day of current month calendar
 
   constructor(currentDate: Date) {
     this.currentDate = currentDate;
@@ -96,6 +103,123 @@ export class HomeStore {
     })
   }
 
+  private getMonthStartDate(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  private getEarliestMonthStartDate(): Date {
+    let currentDate = new Date();
+    return new Date(currentDate.getFullYear(), currentDate.getMonth() - 6, 1);
+  }
+
+  private getLatestMonthStartDate(): Date {
+    let currentDate = new Date();
+    return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  }
+
+  private getValidMonthStartDate(date: Date): Date {
+    let monthStartDate = this.getMonthStartDate(date);
+    let earliestMonthStartDate = this.getEarliestMonthStartDate();
+    let latestMonthStartDate = this.getLatestMonthStartDate();
+    if (monthStartDate.getTime() < earliestMonthStartDate.getTime()) {
+      return earliestMonthStartDate;
+    }
+    if (monthStartDate.getTime() > latestMonthStartDate.getTime()) {
+      return latestMonthStartDate;
+    }
+    return monthStartDate;
+  }
+
+  private updateMonthData(baseDate: Date, callback: Function) {
+    this.monthBaseDate = this.getValidMonthStartDate(baseDate);
+    this.monthTitle = `${this.monthBaseDate.getFullYear()}年${padTo2Digits(this.monthBaseDate.getMonth() + 1)}月`;
+    let monthInfo: WeekCalendarInfo = getMonthCalendar(new Date(this.monthBaseDate));
+    DayInfoApi.queryList(monthInfo.strArr, (res: DayInfo[]) => {
+      for (let i = 0; i < monthInfo.arr.length; i++) {
+        if (monthInfo.arr[i].dateStr !== '') {
+          let dayInfo = res.find((item: DayInfo) => item.date === monthInfo.arr[i].dateStr);
+          monthInfo.arr[i].dayInfo = dayInfo || new DayInfo(monthInfo.arr[i].dateStr, 0, 0);
+        }
+      }
+      this.monthDateArr = monthInfo.arr;
+      callback();
+    })
+  }
+
+  public openMonthView() {
+    this.updateMonthData(new Date(this.showDate), () => {
+      this.showMonthView = true;
+    })
+  }
+
+  public closeMonthView() {
+    this.showMonthView = false;
+  }
+
+  public canGoPreviousMonth(): boolean {
+    return this.monthBaseDate.getTime() > this.getEarliestMonthStartDate().getTime();
+  }
+
+  public canGoNextMonth(): boolean {
+    return this.monthBaseDate.getTime() < this.getLatestMonthStartDate().getTime();
+  }
+
+  public changeMonth(offset: number) {
+    if (offset < 0 && !this.canGoPreviousMonth()) {
+      return;
+    }
+    if (offset > 0 && !this.canGoNextMonth()) {
+      return;
+    }
+    let nextMonthDate = new Date(this.monthBaseDate.getFullYear(), this.monthBaseDate.getMonth() + offset, 1);
+    this.updateMonthData(nextMonthDate, () => {});
+  }
+
+  private calDayInfoByTaskList(dateStr: string, taskList: TaskInfo[]): DayInfo {
+    let targetTaskNum: number = 0;
+    let finTaskNum: number = 0;
+    taskList.forEach((taskItem: TaskInfo) => {
+      if (taskItem.isOpen) {
+        targetTaskNum++;
+        if (taskItem.isDone) {
+          finTaskNum++;
+        }
+      }
+    });
+    return new DayInfo(dateStr, targetTaskNum, finTaskNum);
+  }
+
+  private saveDayInfo(dayInfo: DayInfo, callback: Function) {
+    DayInfoApi.updateData(dayInfo, (res: number) => {
+      if (res) {
+        callback(res);
+        return;
+      }
+      DayInfoApi.insertData(dayInfo, (insertRes: number) => {
+        callback(insertRes);
+      });
+    });
+  }
+
+  private syncMonthDayInfo(dateStr: string, dayInfo: DayInfo) {
+    if (!this.showMonthView) {
+      return;
+    }
+    this.monthDateArr = this.monthDateArr.map((item: WeekDateModel) => {
+      if (item.dateStr === dateStr) {
+        item.dayInfo = dayInfo;
+      }
+      return item;
+    }).slice(0);
+  }
+
+  public refreshDayInfoByTaskList(dateStr: string, taskList: TaskInfo[]): DayInfo {
+    let dayInfo: DayInfo = this.calDayInfoByTaskList(dateStr, taskList);
+    this.saveDayInfo(dayInfo, () => {});
+    this.syncMonthDayInfo(dateStr, dayInfo);
+    return dayInfo;
+  }
+
   // check is current day
   public checkCurrentDay(): boolean {
     return dateToStr(new Date()) === this.selectedDayInfo?.dateStr;
@@ -141,43 +265,18 @@ export class HomeStore {
         if (task.date === item.dateStr) {
           Logger.info('item', JSON.stringify(item));
           let taskList: TaskInfo[] = item.taskList;
-          const dayInfo: DayInfo = item.dayInfo;
           if (editedTaskInfo.isOpen) {
-            // add task
+            // add task. Recalculate today's badge progress by currently open tasks.
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
-            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
-              if (!res) {
-                TaskInfoTableApi.insertData(task, (insertRes: number) => {
-                  Logger.info('updateTaskInfoList', `Insert task ${taskID} for ${task.date}, result: ${insertRes}`);
-                });
-              }
-            });
-            let count: number = 0;
-            taskList.forEach((taskItem: TaskInfo) => {
-              if (taskItem.isDone) {
-                count++;
-              }
-            });
-            if (count > dayInfo.finTaskNum) {
-              dayInfo.finTaskNum = count;
-            }
           } else {
-            // delete task
+            // delete task. Recalculate today's badge progress by remaining open tasks.
             let taskIndex = taskList.findIndex((taskItem) => taskItem.taskID === taskID);
             Logger.info('taskList[taskIndex]', JSON.stringify(taskList[taskIndex]));
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
-            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
-              Logger.info('updateTaskInfoList', `Disable task ${taskID} for ${task.date}, result: ${res}`);
-            });
           }
-          dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
-          if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
-            dayInfo.finTaskNum = dayInfo.targetTaskNum;
-          }
-          DayInfoApi.updateData(dayInfo, () => {
-          });
+          let dayInfo: DayInfo = this.refreshDayInfoByTaskList(item.dateStr, taskList);
           Logger.debug("tempDayInfo", JSON.stringify(dayInfo));
           let weekDateModelStr = JSON.stringify(item);
           let currentDayInfo: WeekDateModel = JSON.parse(weekDateModelStr);
@@ -210,8 +309,8 @@ export class HomeStore {
   public getDonePercent(): string {
     let dayInfo = this.selectedDayInfo?.dayInfo;
     Logger.debug("dayInfo", JSON.stringify(dayInfo));
-    if (dayInfo && (dayInfo?.finTaskNum || 0) > 0) {
-      if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
+    if (dayInfo && (dayInfo?.targetTaskNum || 0) > 0 && (dayInfo?.finTaskNum || 0) > 0) {
+      if (dayInfo.finTaskNum >= dayInfo.targetTaskNum) {
         return `${Const.DEFAULT_100}`;
       }
       return `${Math.ceil(dayInfo.finTaskNum / dayInfo.targetTaskNum * Const.DEFAULT_100)}`;
@@ -296,19 +395,19 @@ export class HomeStore {
   }
 
   updateDayInfo(): Promise<DayInfo> {
-    let dayInfo: DayInfo = this.selectedDayInfo.dayInfo;
-    dayInfo.finTaskNum += 1;
-    dayInfo.targetTaskNum = Const.PROGRESS_TOTAL;
+    let dayInfo: DayInfo = this.calDayInfoByTaskList(this.selectedDayInfo.dateStr, this.selectedDayInfo.taskList);
     return new Promise((resolve, reject) => {
-      DayInfoApi.updateData(dayInfo, (res: number) => {
+      this.saveDayInfo(dayInfo, (res: number) => {
         if (!res) {
           Logger.error('taskClock-updateDayInfo', JSON.stringify(res));
           reject(res);
+          return;
         }
         Logger.info('taskClock-updateDayInfo', JSON.stringify(dayInfo));
         // 同步界面数据
         let dayInfoStr = JSON.stringify(dayInfo);
         this.selectedDayInfo.dayInfo = JSON.parse(dayInfoStr);
+        this.syncMonthDayInfo(this.selectedDayInfo.dateStr, dayInfo);
         resolve(dayInfo);
       });
     });
@@ -363,7 +462,18 @@ export class HomeStore {
             result.expGained = exp;
             result.oldLevel = oldLevel;
             result.newLevel = newLevel;
-            resolve(result);
+            let currentUser = GlobalContext.getContext().getObject('currentUser') as FriendInfo;
+            let queryUsername = currentUser ? currentUser.username : '';
+            FriendInfoApi.queryByUsername(queryUsername, (me: FriendInfo | null) => {
+              if (me) {
+                me.experience = res.experience;
+                FriendInfoApi.updateData(me, () => {
+                  resolve(result);
+                });
+              } else {
+                resolve(result);
+              }
+            });
           } else {
             reject(flag);
           }

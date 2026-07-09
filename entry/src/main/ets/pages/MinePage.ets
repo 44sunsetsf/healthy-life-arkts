@@ -18,24 +18,49 @@ import { UserBaseInfo } from '../view/UserBaseInfo';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 import UserInfoApi from '../common/database/tables/UserInfoApi';
 import UserInfo from '../viewmodel/UserInfo';
+import FriendInfoApi from '../common/database/tables/FriendInfoApi';
+import FriendInfo from '../viewmodel/FriendInfo';
+import { GlobalContext } from '../common/utils/GlobalContext';
+import router from '@ohos.router';
+import common from '@ohos.app.ability.common';
+import data_preferences from '@ohos.data.preferences';
+
+const H_STORE: string = 'healthAppStore';
+const IS_LOGIN: string = 'isLogin';
 
 @Component
 export struct MineIndex {
   @State nickname: string = Const.NICK_NAME;
   @State signature: string = Const.SIGNATURE;
   @State avatar: string = '';
+  context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
 
   aboutToAppear() {
     this.loadUserInfo();
   }
 
   loadUserInfo() {
-    UserInfoApi.query((result: UserInfo | null) => {
-      if (result) {
-        this.nickname = result.nickname || Const.NICK_NAME;
-        this.signature = result.signature || '';
-        this.avatar = result.avatar;
-      }
+    let currentUser = GlobalContext.getContext().getObject('currentUser') as FriendInfo;
+    if (currentUser && currentUser.username) {
+      UserInfoApi.queryByUsername(currentUser.username, (result: UserInfo | null) => {
+        if (result) {
+          this.nickname = result.nickname || currentUser.nickname;
+          this.signature = result.signature || '';
+          this.avatar = result.avatar;
+        } else {
+          this.nickname = currentUser.nickname;
+        }
+      });
+    }
+  }
+
+  handleLogout() {
+    let preferences = data_preferences.getPreferences(this.context, H_STORE);
+    preferences.then((res) => {
+      res.put(IS_LOGIN, false).then(() => {
+        res.flush();
+        router.replaceUrl({ url: 'pages/LoginPage' });
+      });
     });
   }
 
@@ -48,6 +73,19 @@ export struct MineIndex {
       });
 
       ListInfo();
+
+      Button('退出登录')
+        .width('80%')
+        .height(44)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Color.White)
+        .backgroundColor('#E84026')
+        .borderRadius(22)
+        .margin({ top: 32 ,bottom: 20})
+        .onClick(() => {
+          this.handleLogout();
+        })
     }
     .height(Const.FULL_HEIGHT)
     .backgroundColor($r('app.color.mineBgColor'))

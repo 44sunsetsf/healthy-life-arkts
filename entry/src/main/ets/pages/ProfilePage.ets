@@ -4,6 +4,8 @@ import picker from '@ohos.file.picker';
 import Logger from '../common/utils/Logger';
 import UserInfo from '../viewmodel/UserInfo';
 import UserInfoApi from '../common/database/tables/UserInfoApi';
+import FriendInfo from '../viewmodel/FriendInfo';
+import { GlobalContext } from '../common/utils/GlobalContext';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 
 @CustomDialog
@@ -378,7 +380,9 @@ struct ProfilePage {
   });
 
   aboutToAppear() {
-    UserInfoApi.query((result: UserInfo | null) => {
+    let currentUser = GlobalContext.getContext().getObject('currentUser') as FriendInfo;
+    let username = currentUser ? currentUser.username : '';
+    UserInfoApi.queryByUsername(username, (result: UserInfo | null) => {
       if (result) {
         this.avatar = result.avatar;
         this.nickname = result.nickname;
@@ -387,6 +391,10 @@ struct ProfilePage {
         this.birthday = result.birthday;
         this.userHeight = result.height;
         this.userWeight = result.weight;
+      } else {
+        if (currentUser) {
+          this.nickname = currentUser.nickname;
+        }
       }
     });
   }
@@ -406,7 +414,9 @@ struct ProfilePage {
   }
 
   saveUserInfo() {
-    let userInfo = new UserInfo(0, this.avatar, this.nickname, this.signature, this.gender, this.birthday, this.userHeight, this.userWeight);
+    let currentUser = GlobalContext.getContext().getObject('currentUser') as FriendInfo;
+    let username = currentUser ? currentUser.username : '';
+    let userInfo = new UserInfo(0, username, this.avatar, this.nickname, this.signature, this.gender, this.birthday, this.userHeight, this.userWeight);
     UserInfoApi.insertOrUpdateData(userInfo, (flag: number) => {
       if (flag) {
         prompt.showToast({ message: '保存成功' });

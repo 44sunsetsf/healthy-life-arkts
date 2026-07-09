@@ -2,9 +2,11 @@
   "src": [
     "pages/SplashPage",
     "pages/AdvertisingPage",
+    "pages/LoginPage",
     "pages/MainPage",
     "pages/TaskListPage",
     "pages/TaskEditPage",
-    "pages/ProfilePage"
+    "pages/ProfilePage",
+    "pages/RankPage"
   ]
 }

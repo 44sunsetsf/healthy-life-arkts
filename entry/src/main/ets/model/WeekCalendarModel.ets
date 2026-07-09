@@ -91,3 +91,42 @@ export function getPreviousWeek(showDate: Date): WeekCalendarInfo {
   return weekCalendarInfo;
 }
 
+
+
+/**
+ * get month calendar data, including blank cells before/after the current month.
+ * Monday is the first day in the month grid.
+ *
+ * @param showDate base date
+ */
+export function getMonthCalendar(showDate: Date): WeekCalendarInfo {
+  let weekCalendarInfo: WeekCalendarInfo = new WeekCalendarInfo();
+  let arr: Array<WeekDateModel> = [];
+  let strArr: Array<string> = [];
+  let year = showDate.getFullYear();
+  let month = showDate.getMonth();
+  let firstDate = new Date(year, month, 1);
+  let leadingBlankNum = firstDate.getDay() === 0 ? 6 : firstDate.getDay() - 1;
+
+  for (let index = 0; index < leadingBlankNum; index++) {
+    arr.push(new WeekDateModel(`blank-start-${index}`, '', new Date(year, month, 1)));
+  }
+
+  let dayCount = new Date(year, month + 1, 0).getDate();
+  for (let index = 1; index <= dayCount; index++) {
+    let tempDate = new Date(year, month, index);
+    let dateStr = dateToStr(tempDate);
+    strArr.push(dateStr);
+    arr.push(new WeekDateModel(`${index}`, dateStr, tempDate));
+  }
+
+  let tailIndex = 0;
+  while (arr.length % WEEK_DAY_NUM !== 0) {
+    arr.push(new WeekDateModel(`blank-end-${tailIndex}`, '', new Date(year, month, dayCount)));
+    tailIndex++;
+  }
+
+  weekCalendarInfo.arr = arr;
+  weekCalendarInfo.strArr = strArr;
+  return weekCalendarInfo;
+}

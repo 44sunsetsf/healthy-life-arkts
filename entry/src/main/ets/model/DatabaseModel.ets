@@ -100,8 +100,8 @@ export class DatabaseModel {
           dayInfo.targetTaskNum = this.calTaskNum(result);
           this.insertPreInfo(curDate, finDate, result, dayInfo);
           let finResult: TaskInfo[] = [];
-          for (let i = 0; i < 6; i++) {
-            if (result[i].isOpen === true) {
+          for (let i = 0; i < Const.TASK_NUM; i++) {
+            if (result[i]?.isOpen === true) {
               finResult.push(result[i]);
             }
           }
@@ -135,8 +135,7 @@ export class DatabaseModel {
         }
       })
       for (let i = 0; i < Const.TASK_NUM; i++) {
-        let tmp = new TaskInfo(0, '', 0, '', false, '', '', '', false, '');
-        tmp = result[i];
+        let tmp = result[i] || new TaskInfo(0, '', i + 1, '', false, '08: 00', '00: 00', '1,2,3,4,5,6,7', false, '');
         tmp.date = curDate.toDateString();
         TaskInfoApi.insertData(tmp, (isDone: number) => {
           if (isDone) {
@@ -152,7 +151,7 @@ export class DatabaseModel {
     let taskNum = 0;
     let finishNum = 0;
     for (let i = 0; i < Const.TASK_NUM; i++) {
-      if (taskResult[i].isOpen) {
+      if (taskResult[i]?.isOpen) {
         result.push(taskResult[i]);
         taskNum += 1;
         if (taskResult[i].isDone) {

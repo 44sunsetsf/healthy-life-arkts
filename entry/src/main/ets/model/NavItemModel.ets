@@ -25,7 +25,6 @@ export enum TabId {
   HOME,
   HEALTH,
   ACHIEVEMENT,
-  RANK,
   AI,
   MINE
 }
@@ -48,12 +47,6 @@ export const NavList: NavItem[] = [
     icon_selected: $r('app.media.ic_tabs_achievement_sel'),
     text: $r('app.string.tab_achievement'),
     id: TabId.ACHIEVEMENT
-  },
-  {
-    icon: $r('app.media.ic_tabs_achievement_normal'),
-    icon_selected: $r('app.media.ic_tabs_achievement_sel'),
-    text: $r('app.string.tab_rank'),
-    id: TabId.RANK
   },
   {
     icon: $r('app.media.ic_tabs_home_normal'),
