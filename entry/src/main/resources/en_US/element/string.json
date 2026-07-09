@@ -29,6 +29,34 @@
       "value": "Used to publish/cancel task reminders"
     },
     {
+      "name": "watch_panel_title",
+      "value": "Watch Health Data"
+    },
+    {
+      "name": "watch_sync_button",
+      "value": "Sync Watch"
+    },
+    {
+      "name": "watch_linkage",
+      "value": "Watch Linkage"
+    },
+    {
+      "name": "watch_steps",
+      "value": "Steps"
+    },
+    {
+      "name": "watch_heart_rate",
+      "value": "Heart Rate (bpm)"
+    },
+    {
+      "name": "watch_sleep_duration",
+      "value": "Sleep (h)"
+    },
+    {
+      "name": "watch_no_data",
+      "value": "Watch data not synced yet"
+    },
+    {
       "name": "empty",
       "value": "empty"
     }

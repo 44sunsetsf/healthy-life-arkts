@@ -93,3 +93,21 @@ export const oneWeekDictFunc = () => {
     return oneWeekDict;
 }
 
+const MINUTES_OF_HOUR: number = 60;
+const HOURS_OF_DAY: number = 24;
+
+// parse 'HH:mm' (tolerates spaces, e.g. '08: 00') into minutes since midnight, -1 if invalid
+export function timeStrToMinutes(timeStr: string): number {
+    let parts = timeStr.split(' ').join('').split(':');
+    if (parts.length !== 2) {
+        return -1;
+    }
+    let hour = Number(parts[0]);
+    let minute = Number(parts[1]);
+    if (isNaN(hour) || isNaN(minute) || hour < 0 || hour >= HOURS_OF_DAY
+        || minute < 0 || minute >= MINUTES_OF_HOUR) {
+        return -1;
+    }
+    return hour * MINUTES_OF_HOUR + minute;
+}
+

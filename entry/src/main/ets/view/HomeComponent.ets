@@ -18,6 +18,7 @@ import HealthText from './HealthTextComponent';
 import AddBtn from '../view/home/AddBtnComponent';
 import { TaskCard } from '../view/home//TaskCardComponent';
 import HomeTopView from '../view/home/HomeTopComponent';
+import WatchHealthPanel from '../view/home/WatchHealthPanel';
 import { CustomDialogView, CustomDialogCallback } from '../view/dialog/CustomDialogView';
 import TaskInfo from '../viewmodel/TaskInfo';
 import { HomeStore } from '../viewmodel/HomeViewModel';
@@ -56,8 +57,15 @@ export default struct HomeIndex {
   @Link homeStore: HomeStore;
   @Link editedTaskInfo: ITaskItem;
   @Link @Watch('taskChange') editedTaskID: string;
+  @StorageLink('watchLinkageEnabled') @Watch('watchLinkageChange') watchLinkageEnabled: boolean = false;
   private scroller: Scroller = new Scroller();
   private yOffset: number = 0;
+
+  watchLinkageChange(): void {
+    if (!this.watchLinkageEnabled) {
+      this.homeStore.watchHealthData = null;
+    }
+  }
 
   taskChange() {
     this.homeStore.updateTaskInfoList(this.editedTaskInfo);
@@ -122,6 +130,15 @@ export default struct HomeIndex {
       Scroll(this.scroller) {
         Column() {
           HomeTopView({ homeStore: $homeStore })
+          if (this.watchLinkageEnabled && this.homeStore.checkCurrentDay()) {
+            WatchHealthPanel({ homeStore: $homeStore })
+              .padding({
+                top: Const.THOUSANDTH_15,
+                left: Const.THOUSANDTH_33,
+                right: Const.THOUSANDTH_33
+              })
+              .width(Const.THOUSANDTH_1000)
+          }
           Text($r('app.string.task_list')).titleTextStyle()
           if (this.homeStore.getTaskListOfDay().length > 0) {
             Column({ space: Const.DEFAULT_8 }) {

@@ -129,13 +129,22 @@ export const addTask = (params: TaskInfo, context: Context) => {
     let taskInfoStr = JSON.stringify(params);
     let taskInfo: TaskInfo = JSON.parse(taskInfoStr);
     taskInfo.date = new Date().toDateString();
-    taskInfo.isDone = true;
-    TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
-      if (!flag) {
-        Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
-        reject(flag);
+    TaskInfoApi.query(taskInfo.date, false, (taskResult: TaskInfo[]) => {
+      let currentTask = taskResult.find((item: TaskInfo) => item.taskID === taskInfo.taskID);
+      if (currentTask && currentTask.isOpen) {
+        taskInfo.isDone = currentTask.isDone;
+        taskInfo.finValue = currentTask.finValue;
+      } else {
+        taskInfo.isDone = false;
+        taskInfo.finValue = '';
       }
-      resolve(flag);
+      TaskInfoApi.updateDataByDate(taskInfo, (flag: number) => {
+        if (!flag) {
+          Logger.error('insertTaskSetting', 'updateTaskSetting Error!');
+          reject(flag);
+        }
+        resolve(flag);
+      });
     });
   });
 }

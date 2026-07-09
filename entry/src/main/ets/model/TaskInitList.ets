@@ -137,13 +137,13 @@ export const TaskMapById: Array<ITaskItem> = [
     taskName: $r('app.string.task_night'),
     icon: $r("app.media.ic_task_night"),
     dialogBg: $r('app.media.ic_dialog_sleep'),
-    targetValue: '20: 00',
+    targetValue: '22:00',
     isOpen: false,
     unit: '',
     step: 0,
     isInit: true,
     isAlarm: false,
-    startTime: '08: 00',
+    startTime: '22:00',
     endTime: '00: 00',
     frequency: '1, 2, 3, 4, 5, 6, 7'
   }

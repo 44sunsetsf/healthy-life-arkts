@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-import { CommonConstants as Const } from '../common/constants/CommonConstants';
+import { CommonConstants as Const, Unit } from '../common/constants/CommonConstants';
 import { isReachNewAchievement, ACHIEVEMENT_LEVEL_KEY } from '../model/AchieveModel';
 import { TaskMapById, ITaskItem, ACHIEVEMENT_LEVEL_LIST } from '../model/TaskInitList';
-import TaskInfo from './TaskInfo';
+import TaskInfo, { taskType } from './TaskInfo';
 import DayInfo from './DayInfo';
-import { dateToStr, weekDateFormat } from '../common/utils/Utils';
+import { dateToStr, weekDateFormat, timeStrToMinutes } from '../common/utils/Utils';
 import { WeekDateModel, initializeOnStartUp, getPreviousWeek, WEEK_DAY_NUM } from '../model/WeekCalendarModel';
 import DatabaseApi from '../model/DatabaseModel';
 import TaskInfoTableApi from '../common/database/tables/TaskInfoApi';
@@ -28,6 +28,11 @@ import Logger from '../common/utils/Logger';
 import GlobalInfo from './GlobalInfo';
 import WeekCalendarInfo from './WeekCalendarInfo';
 import AchievementInfo from './AchievementInfo';
+import { WatchHealthData } from './WatchHealthData';
+import { WatchSyncResult } from './WatchSyncResult';
+import { GlobalContext } from '../common/utils/GlobalContext';
+
+const EVENING_START_MINUTES: number = 720; // 12:00, sleep time earlier than this means after midnight
 
 @Observed
 export class HomeStore {
@@ -37,6 +42,7 @@ export class HomeStore {
   public showDate: number;
   public dateTitle: string;
   public selectedDayInfo: WeekDateModel = new WeekDateModel('', '', new Date()); // task info on selected day
+  public watchHealthData: WatchHealthData | null = null;
 
   constructor(currentDate: Date) {
     this.currentDate = currentDate;
@@ -129,15 +135,19 @@ export class HomeStore {
       let startTime = editedTaskInfo.startTime;
       let endTime = editedTaskInfo.endTime;
       let isOpen = editedTaskInfo.isOpen;
-      let task = new TaskInfo(0, dateToStr(new Date()), taskID, targetValue, isAlarm,
-        startTime, endTime, frequency, true, targetValue, isOpen);
+      let todayDate = dateToStr(new Date());
       this.dateArr = this.dateArr.map((item: WeekDateModel) => {
-        if (task.date === item.dateStr) {
+        if (todayDate === item.dateStr) {
           Logger.info('item', JSON.stringify(item));
           let taskList: TaskInfo[] = item.taskList;
           const dayInfo: DayInfo = item.dayInfo;
           if (editedTaskInfo.isOpen) {
             // add task
+            let currentTask = taskList.find((taskItem: TaskInfo) => taskItem.taskID === taskID);
+            let isDone = currentTask ? currentTask.isDone : false;
+            let finValue = currentTask ? currentTask.finValue : '';
+            let task = new TaskInfo(0, todayDate, taskID, targetValue, isAlarm,
+              startTime, endTime, frequency, isDone, finValue, isOpen);
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
@@ -214,16 +224,30 @@ export class HomeStore {
     return [];
   }
 
-  public async taskClock(taskInfo: TaskInfo) {
+  public async taskClock(taskInfo: TaskInfo): Promise<AchievementInfo> {
     let taskItem = await this.updateTask(taskInfo);
-    let dateStr = this.selectedDayInfo?.dateStr;
     if (!taskItem) {
       return {
         achievementLevel: 0,
         showAchievement: false
       } as AchievementInfo;
     }
+    return this.finishTaskUpdate(taskItem);
+  }
 
+  public async taskClockByValue(taskInfo: TaskInfo, newFinValue: string, markDone: boolean): Promise<AchievementInfo> {
+    let taskItem = await this.updateTaskAbsolute(taskInfo, newFinValue, markDone);
+    if (!taskItem) {
+      return {
+        achievementLevel: 0,
+        showAchievement: false
+      } as AchievementInfo;
+    }
+    return this.finishTaskUpdate(taskItem);
+  }
+
+  private async finishTaskUpdate(taskItem: TaskInfo): Promise<AchievementInfo> {
+    let dateStr = this.selectedDayInfo?.dateStr;
     this.selectedDayInfo.taskList = this.selectedDayInfo.taskList.map((item) => {
       return item.taskID === taskItem?.taskID ? taskItem : item;
     });
@@ -239,6 +263,115 @@ export class HomeStore {
       achievementLevel: achievementLevel,
       showAchievement: ACHIEVEMENT_LEVEL_LIST.includes(achievementLevel)
     } as AchievementInfo;
+  }
+
+  public async syncWatchData(data: WatchHealthData): Promise<WatchSyncResult> {
+    let result = new WatchSyncResult();
+    if (!this.checkCurrentDay()) {
+      result.message = Const.WATCH_SYNC_ONLY_TODAY;
+      return result;
+    }
+    let taskList: TaskInfo[] = this.getTaskListOfDay();
+    if (taskList.length === 0) {
+      result.message = Const.WATCH_SYNC_NO_TASK;
+      return result;
+    }
+    // sequential on purpose: updateDayInfo/updateAchievement must not run concurrently
+    for (let i = 0; i < taskList.length; i++) {
+      let task = taskList[i];
+      try {
+        if (task.taskID === taskType.getup) {
+          await this.syncGetupTask(task, data, result);
+        } else if (task.taskID === taskType.sleepEarly) {
+          await this.syncSleepTask(task, data, result);
+        } else if (task.taskID === taskType.drinkWater) {
+          await this.syncWaterTask(task, data, result);
+        }
+      } catch (err) {
+        Logger.error('watchSync', JSON.stringify(err));
+      }
+    }
+    if (result.synced) {
+      GlobalContext.getContext().setObject('taskListChange', true);
+    }
+    result.message = this.buildSyncMessage(result);
+    return result;
+  }
+
+  private async syncGetupTask(task: TaskInfo, data: WatchHealthData, result: WatchSyncResult): Promise<void> {
+    if (task.isDone) {
+      return;
+    }
+    let wakeUpMinutes = timeStrToMinutes(data.sleepEndTime);
+    let targetMinutes = timeStrToMinutes(task.targetValue);
+    if (wakeUpMinutes < 0 || targetMinutes < 0 || wakeUpMinutes > targetMinutes) {
+      return;
+    }
+    let achievement = await this.taskClock(task);
+    result.synced = true;
+    result.completedTaskNames.push(Const.GET_UP_TASK_NAME);
+    this.mergeAchievement(result, achievement);
+  }
+
+  private async syncSleepTask(task: TaskInfo, data: WatchHealthData, result: WatchSyncResult): Promise<void> {
+    if (task.isDone) {
+      return;
+    }
+    let sleepMinutes = timeStrToMinutes(data.sleepStartTime);
+    let targetMinutes = timeStrToMinutes(task.targetValue);
+    if (sleepMinutes < EVENING_START_MINUTES || targetMinutes < 0 || sleepMinutes > targetMinutes) {
+      return;
+    }
+    let achievement = await this.taskClock(task);
+    result.synced = true;
+    result.completedTaskNames.push(Const.SLEEP_TASK_NAME);
+    this.mergeAchievement(result, achievement);
+  }
+
+  private async syncWaterTask(task: TaskInfo, data: WatchHealthData, result: WatchSyncResult): Promise<void> {
+    if (task.isDone) {
+      return;
+    }
+    let target = Number(task.targetValue);
+    if (!(target > 0)) {
+      return;
+    }
+    let current = Number(task.finValue) || 0;
+    let newValue = Math.min(data.waterIntakeLiters, target);
+    if (newValue <= current) {
+      return;
+    }
+    let markDone = newValue >= target;
+    let achievement = await this.taskClockByValue(task, `${newValue}`, markDone);
+    result.synced = true;
+    if (markDone) {
+      result.completedTaskNames.push(Const.DRINK_TASK_NAME);
+    } else {
+      result.waterUpdated = true;
+      result.waterFinValue = `${newValue}`;
+    }
+    this.mergeAchievement(result, achievement);
+  }
+
+  private mergeAchievement(result: WatchSyncResult, achievement: AchievementInfo): void {
+    if (achievement.showAchievement) {
+      result.showAchievement = true;
+      result.achievementLevel = achievement.achievementLevel;
+    }
+  }
+
+  private buildSyncMessage(result: WatchSyncResult): string {
+    let parts: Array<string> = [];
+    if (result.completedTaskNames.length > 0) {
+      parts.push(Const.WATCH_SYNC_AUTO_DONE_PREFIX + result.completedTaskNames.join(Const.PAUSE_MARK));
+    }
+    if (result.waterUpdated) {
+      parts.push(Const.WATCH_SYNC_WATER_PREFIX + result.waterFinValue + Unit.Liter);
+    }
+    if (parts.length === 0) {
+      return Const.WATCH_SYNC_NO_CHANGE;
+    }
+    return parts.join(Const.WATCH_SYNC_SEPARATOR);
   }
 
   updateTask(task: TaskInfo): Promise<TaskInfo> {
@@ -261,6 +394,23 @@ export class HomeStore {
       TaskInfoTableApi.updateDataByDate(updateTask, (res: number) => {
         if (!res || hasExceed) {
           Logger.error('taskClock-updateTask', JSON.stringify(res));
+          reject(res);
+        }
+        resolve(updateTask);
+      })
+    })
+  }
+
+  updateTaskAbsolute(task: TaskInfo, newFinValue: string, markDone: boolean): Promise<TaskInfo> {
+    return new Promise((resolve, reject) => {
+      let updateTask = new TaskInfo(task.id, task.date, task.taskID, task.targetValue, task.isAlarm, task.startTime,
+        task.endTime, task.frequency, task.isDone, task.finValue, task.isOpen);
+      let hasExceed = updateTask.isDone;
+      updateTask.isDone = markDone;
+      updateTask.finValue = markDone ? task.targetValue : newFinValue;
+      TaskInfoTableApi.updateDataByDate(updateTask, (res: number) => {
+        if (!res || hasExceed) {
+          Logger.error('watchSync-updateTaskAbsolute', JSON.stringify(res));
           reject(res);
         }
         resolve(updateTask);

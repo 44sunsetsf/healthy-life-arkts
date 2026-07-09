@@ -15,15 +15,22 @@
 
 import { BroadCast } from './BroadCast';
 import Logger from './Logger';
+import { IHealthDataSource } from '../../service/healthdata/IHealthDataSource';
+import MockHealthDataSource from '../../service/healthdata/MockHealthDataSource';
+import HealthKitDataSource from '../../service/healthdata/HealthKitDataSource';
 
 const APP_KEY_GROUP_DATA_SOURCE_MANAGER = 'app_key_group_data_source_manager';
+// switch to false once HealthKitDataSource is implemented (real device + AGC scopes)
+const USE_MOCK_HEALTH_SOURCE: boolean = true;
 
 export class HealthDataSrcMgr {
   private broadCast: BroadCast;
+  private healthDataSource: IHealthDataSource;
 
   constructor() {
     Logger.debug('HealthDataSourceManager', 'constructor');
     this.broadCast = new BroadCast();
+    this.healthDataSource = USE_MOCK_HEALTH_SOURCE ? new MockHealthDataSource() : new HealthKitDataSource();
   }
 
   public static getInstance(): HealthDataSrcMgr {
@@ -36,5 +43,9 @@ export class HealthDataSrcMgr {
 
   public getBroadCast(): BroadCast {
     return this.broadCast;
+  }
+
+  public getHealthDataSource(): IHealthDataSource {
+    return this.healthDataSource;
   }
 }

@@ -213,6 +213,23 @@ export class CommonConstants {
 
   static readonly H_STORE: string = 'healthAppStore';
 
+  // watch sync prompt message
+  static readonly WATCH_SYNC_AUTO_DONE_PREFIX: string = '已自动打卡：';
+
+  static readonly WATCH_SYNC_WATER_PREFIX: string = '喝水已同步至 ';
+
+  static readonly WATCH_SYNC_NO_CHANGE: string = '手表数据已同步，无需更新打卡';
+
+  static readonly WATCH_SYNC_ONLY_TODAY: string = '仅支持同步今日数据';
+
+  static readonly WATCH_SYNC_NO_TASK: string = '今日暂无开启的任务';
+
+  static readonly WATCH_SYNC_FAILED: string = '手表数据同步失败';
+
+  static readonly PAUSE_MARK: string = '、';
+
+  static readonly WATCH_SYNC_SEPARATOR: string = '；';
+
   static readonly REMINDER_AGENT_TAG: string = 'reminderAgent';
 
   static readonly PACKAGE_NAME: string = 'com.example.healthy_life';

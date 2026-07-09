@@ -15,11 +15,29 @@
 
 import prompt from '@system.prompt';
 import { ITaskItem } from '../../model/TaskInitList';
-import { frequencyRange } from '../../common/utils/Utils';
+import { frequencyRange, timeStrToMinutes, padTo2Digits } from '../../common/utils/Utils';
 import { returnTimeStamp, createAppleRange, createDrinkRange, formatTime } from '../../viewmodel/TaskViewModel';
 import { taskType } from '../../viewmodel/TaskInfo';
 import { CommonConstants as Const } from '../..//common/constants/CommonConstants';
 import { FrequencyContentType } from '../../model/TaskInitList';
+
+const MINUTES_OF_HOUR: number = 60;
+
+class DialogTimeHelper {
+  public static normalize(timeStr: string, fallbackTime: string): string {
+    let minutes = timeStrToMinutes(timeStr);
+    if (minutes < 0) {
+      return fallbackTime;
+    }
+    let hour = Math.floor(minutes / MINUTES_OF_HOUR);
+    let minute = minutes % MINUTES_OF_HOUR;
+    return `${padTo2Digits(hour)}:${padTo2Digits(minute)}`;
+  }
+
+  public static buildSelectedTime(timeStr: string): Date {
+    return new Date(`${new Date().toDateString()} ${timeStr}:00`);
+  }
+}
 
 @CustomDialog
 export struct TargetSettingDialog {
@@ -28,7 +46,7 @@ export struct TargetSettingDialog {
   drinkRange: string[] = createDrinkRange();
   appleRange: string[] = createAppleRange();
   currentValue: string = this.settingParams.targetValue;
-  currentTime: string = Const.DEFAULT_TIME;
+  currentTime: string = DialogTimeHelper.normalize(this.settingParams.targetValue, Const.DEFAULT_TIME);
 
   compareTime(startTime: string, endTime: string) {
     if (returnTimeStamp(this.currentTime) < returnTimeStamp(startTime) ||
@@ -74,7 +92,7 @@ export struct TargetSettingDialog {
 
       if ([taskType.getup, taskType.sleepEarly].indexOf(this.settingParams?.taskID) > Const.HAS_NO_INDEX) {
         TimePicker({
-          selected: new Date(`${new Date().toDateString()} 8:00:00`),
+          selected: DialogTimeHelper.buildSelectedTime(this.currentTime),
         })
           .height(Const.THOUSANDTH_800)
           .useMilitaryTime(true)
@@ -119,7 +137,7 @@ export struct TargetSettingDialog {
 export struct RemindTimeDialog {
   @Consume settingParams: ITaskItem;
   controller: CustomDialogController = new CustomDialogController({ builder: '' });
-  currentTime: string = Const.DEFAULT_TIME;
+  currentTime: string = DialogTimeHelper.normalize(this.settingParams.startTime, Const.DEFAULT_TIME);
 
   build() {
     Column() {
@@ -133,7 +151,7 @@ export struct RemindTimeDialog {
       .width(Const.THOUSANDTH_900)
 
       TimePicker({
-        selected: new Date(`${new Date().toDateString()} 8:00:00`),
+        selected: DialogTimeHelper.buildSelectedTime(this.currentTime),
       })
         .height(Const.THOUSANDTH_800)
         .useMilitaryTime(true)

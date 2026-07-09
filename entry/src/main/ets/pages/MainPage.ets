@@ -27,6 +27,11 @@ import { HomeStore } from '../viewmodel/HomeViewModel';
 import GlobalInfoApi from '../common/database/tables/GlobalInfoApi';
 import GlobalInfo from '../viewmodel/GlobalInfo';
 import { GlobalContext } from '../common/utils/GlobalContext';
+import { WatchSettingModel } from '../model/WatchSettingModel';
+
+interface MainPageRouterParams {
+  editTask?: string;
+}
 
 @Styles function allSize() {
   .width(Const.THOUSANDTH_1000)
@@ -37,23 +42,27 @@ import { GlobalContext } from '../common/utils/GlobalContext';
 @Component
 struct Index {
   @State currentPage: number = 0;
-  @State editedTaskInfo: ITaskItem = router.getParams() ? (router.getParams() as Record<string, Object>).editTask as ITaskItem : {} as ITaskItem;
+  @State editedTaskInfo: ITaskItem = {} as ITaskItem;
   @State editedTaskID: string = '0';
   @State homeStore: HomeStore = new HomeStore(new Date());
   private tabController: TabsController = new TabsController();
 
   aboutToAppear() {
+    WatchSettingModel.loadToAppStorage(getContext(this));
     notificationManager.requestEnableNotification().then(() => {
       Logger.info('onPageShow', `requestEnableNotification success`);
-    }).catch((err: Error) => {
-      Logger.error('onPageShow', `requestEnableNotification failed, message is ${err.message}`);
+    }).catch(() => {
+      Logger.error('onPageShow', 'requestEnableNotification failed.');
     });
   }
 
   onPageShow() {
     Logger.info('onPageShow', JSON.stringify(router.getParams()));
-    let params = (router.getParams() ? router.getParams() : {}) as Record<string, Object>;
-    let result = params.editTask ? params.editTask as string : '{}';
+    let result: string = '{}';
+    if (router.getParams()) {
+      let params = router.getParams() as MainPageRouterParams;
+      result = params.editTask ? params.editTask : '{}';
+    }
     this.editedTaskInfo = JSON.parse(result);
     this.editedTaskID = JSON.stringify(this.editedTaskInfo);
     if ((GlobalContext.getContext().getObject('isForeground') as boolean)) {

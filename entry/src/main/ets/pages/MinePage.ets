@@ -15,6 +15,7 @@
 
 import { ListInfo } from '../view/ListInfo';
 import { UserBaseInfo } from '../view/UserBaseInfo';
+import { WatchLinkageSetting } from '../view/WatchLinkageSetting';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
 
 @Component
@@ -28,6 +29,8 @@ export struct MineIndex {
         nickname: this.nickname,
         signature: this.signature
       });
+
+      WatchLinkageSetting();
 
       ListInfo();
     }

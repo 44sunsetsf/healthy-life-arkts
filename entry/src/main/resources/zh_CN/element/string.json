@@ -29,6 +29,34 @@
       "value": "用于发布/取消任务提醒"
     },
     {
+      "name": "watch_panel_title",
+      "value": "手表健康数据"
+    },
+    {
+      "name": "watch_sync_button",
+      "value": "同步手表数据"
+    },
+    {
+      "name": "watch_linkage",
+      "value": "手表联动"
+    },
+    {
+      "name": "watch_steps",
+      "value": "步数"
+    },
+    {
+      "name": "watch_heart_rate",
+      "value": "心率(次/分)"
+    },
+    {
+      "name": "watch_sleep_duration",
+      "value": "睡眠时长(小时)"
+    },
+    {
+      "name": "watch_no_data",
+      "value": "暂未同步手表数据"
+    },
+    {
       "name": "empty",
       "value": "empty"
     }
