@@ -130,7 +130,7 @@ export class HomeStore {
       let endTime = editedTaskInfo.endTime;
       let isOpen = editedTaskInfo.isOpen;
       let task = new TaskInfo(0, dateToStr(new Date()), taskID, targetValue, isAlarm,
-        startTime, endTime, frequency, true, targetValue, isOpen);
+        startTime, endTime, frequency, false, '0', isOpen);
       this.dateArr = this.dateArr.map((item: WeekDateModel) => {
         if (task.date === item.dateStr) {
           Logger.info('item', JSON.stringify(item));
@@ -141,6 +141,13 @@ export class HomeStore {
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID)
               .concat(task)
               .sort((a, b) => a.taskID - b.taskID);
+            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
+              if (!res) {
+                TaskInfoTableApi.insertData(task, (insertRes: number) => {
+                  Logger.info('updateTaskInfoList', `Insert task ${taskID} for ${task.date}, result: ${insertRes}`);
+                });
+              }
+            });
             let count: number = 0;
             taskList.forEach((taskItem: TaskInfo) => {
               if (taskItem.isDone) {
@@ -158,6 +165,9 @@ export class HomeStore {
               dayInfo.finTaskNum -= 1;
             }
             taskList = taskList.filter((taskItem) => taskItem.taskID != taskID);
+            TaskInfoTableApi.updateDataByDate(task, (res: number) => {
+              Logger.info('updateTaskInfoList', `Disable task ${taskID} for ${task.date}, result: ${res}`);
+            });
           }
           dayInfo.targetTaskNum = taskList.length;
           if (dayInfo.finTaskNum > dayInfo.targetTaskNum) {
