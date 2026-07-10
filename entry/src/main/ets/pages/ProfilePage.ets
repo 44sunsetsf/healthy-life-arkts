@@ -124,7 +124,7 @@ struct GenderDialog {
             .fontSize(16)
             .margin({ left: 8 })
         }
-        .margin({ right: 48 })
+        .margin({ right: 30 })
 
         Row() {
           Radio({ value: '女', group: 'genderGroup' })
@@ -138,6 +138,20 @@ struct GenderDialog {
             .fontSize(16)
             .margin({ left: 8 })
         }
+        .margin({ left: 0 })
+        Row() {
+          Radio({ value: '保密', group: 'genderGroup' })
+            .checked(this.selectedGender === '保密')
+            .onChange((isChecked: boolean) => {
+              if (isChecked) {
+                this.selectedGender = '保密';
+              }
+            })
+          Text('保密')
+            .fontSize(16)
+            .margin({ left: 8 })
+        }
+        .margin({ left: 16 })
       }
       .justifyContent(FlexAlign.Center)
       .width('100%')
