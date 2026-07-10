@@ -1,11 +1,3 @@
-<div align="right">
-
-[English](#en) | [中文](#zh)
-
-</div>
-
-<a id="en"></a>
-
 # Healthy Life App (ArkTS)
 
 ### Introduction
@@ -49,9 +41,10 @@ This codelab uses the task-reminder feature, which requires adding the backgroun
 2. This sample uses the Stage model, supporting API version 9.
 3. This sample requires DevEco Studio 3.1 Release to build and run.
 
----
+<details>
+<summary><b>🇨🇳 中文版本（点击展开）</b></summary>
 
-<a id="zh"></a>
+<br>
 
 # 健康生活应用（ArkTS）
 
@@ -96,3 +89,5 @@ This codelab uses the task-reminder feature, which requires adding the backgroun
 1. 本示例仅支持标准系统上运行，支持设备：华为手机或运行在DevEco Studio上的华为手机设备模拟器。
 2. 本示例为Stage模型，支持API version 9。
 3. 本示例需要使用DevEco Studio 3.1 Release版本进行编译运行。
+
+</details>
