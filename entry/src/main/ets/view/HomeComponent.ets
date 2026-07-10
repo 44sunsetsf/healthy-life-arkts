@@ -84,6 +84,8 @@ export default struct HomeIndex {
       let callback: CustomDialogCallback = { confirmCallback: (taskTemp: TaskInfo) => {
         this.onConfirm(taskTemp)
       }, cancelCallback: () => {
+      }, completeCallback: (taskTemp: TaskInfo) => {
+        this.onCompleteAll(taskTemp)
       } };
       this.broadCast.emit(BroadCastType.SHOW_TASK_DETAIL_DIALOG, [item, callback]);
     } else {
@@ -156,6 +158,29 @@ export default struct HomeIndex {
   //confirm clockL
   onConfirm(task: TaskInfo) {
     this.homeStore.taskClock(task).then((res: AchievementInfo) => {
+      if (res.expGained > 0) {
+        this.expGained = res.expGained;
+        this.showExpPopup = true;
+      }
+      if (res.isLevelUp) {
+        this.levelUpLevel = res.newLevel;
+        setTimeout(() => {
+          this.showLevelUpPopup = true;
+        }, 2200);
+      }
+      if (res.showAchievement) {
+        let achievementLevel = res.achievementLevel;
+        if (achievementLevel) {
+          this.broadCast.emit(BroadCastType.SHOW_ACHIEVEMENT_DIALOG, achievementLevel);
+        } else {
+          this.broadCast.emit(BroadCastType.SHOW_ACHIEVEMENT_DIALOG);
+        }
+      }
+    })
+  }
+
+  onCompleteAll(task: TaskInfo) {
+    this.homeStore.taskCompleteAll(task).then((res: AchievementInfo) => {
       if (res.expGained > 0) {
         this.expGained = res.expGained;
         this.showExpPopup = true;

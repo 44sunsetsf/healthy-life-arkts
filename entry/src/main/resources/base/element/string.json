@@ -235,6 +235,10 @@
     {
       "name": "trophy_full_title",
       "value": "全勤成长奖杯"
+    },
+    {
+      "name": "complete_all",
+      "value": "一键完成"
     }
   ]
 }

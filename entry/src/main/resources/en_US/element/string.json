@@ -35,6 +35,10 @@
     {
       "name": "empty",
       "value": "empty"
+    },
+    {
+      "name": "complete_all",
+      "value": "Complete all"
     }
   ]
 }
