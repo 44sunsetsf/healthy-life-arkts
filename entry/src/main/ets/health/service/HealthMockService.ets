@@ -1,4 +1,9 @@
-import { FoodAnalysisResult, HealthDashboardData } from '../model/HealthDashboardModel';
+import {
+  FoodAnalysisResult,
+  HealthCalendarDay,
+  HealthCardRecord,
+  HealthDashboardData
+} from '../model/HealthDashboardModel';
 
 const DEFAULT_SLEEP_HOURS: number = 7.75;
 const DEFAULT_WATER_GOAL: number = 2000;
@@ -7,15 +12,48 @@ const SYNC_STEP_BASE: number = 2218;
 const SYNC_STEP_INC: number = 520;
 const BMR_WEIGHT_FACTOR: number = 15.1;
 const BMR_WEIGHT_OFFSET: number = 371;
+const CALENDAR_START_OFFSET: number = -4;
+const CALENDAR_END_OFFSET: number = 2;
+const WEEK_TEXTS: string[] = ['日', '一', '二', '三', '四', '五', '六'];
 
 export class HealthMockService {
   createInitialData(): HealthDashboardData {
     let data = new HealthDashboardData();
-    data.dateText = this.formatDate(new Date());
+    let today = new Date();
+    data.dateKey = this.formatDateKey(today);
+    data.dateText = this.formatDate(today);
     data.waterGoalMl = DEFAULT_WATER_GOAL;
     data.baseCalories = this.calculateBaseCalories(data.weightKg);
     data.analysisText = '输入今天吃了什么，点击分析后会给出一条演示建议。';
     return data;
+  }
+
+  createCalendarDays(): HealthCalendarDay[] {
+    let days: HealthCalendarDay[] = [];
+    let today = new Date();
+    for (let dayOffset = CALENDAR_START_OFFSET; dayOffset <= CALENDAR_END_OFFSET; dayOffset++) {
+      let date = new Date(today.getTime());
+      date.setDate(today.getDate() + dayOffset);
+
+      let day = new HealthCalendarDay();
+      day.dateKey = this.formatDateKey(date);
+      day.dateText = this.formatDate(date);
+      day.weekText = WEEK_TEXTS[date.getDay()];
+      day.dayText = this.formatTwoDigits(date.getDate());
+      day.dayOffset = dayOffset;
+      day.isToday = dayOffset === 0;
+      day.isFuture = dayOffset > 0;
+      days.push(day);
+    }
+    return days;
+  }
+
+  createDashboardDataList(days: HealthCalendarDay[]): HealthDashboardData[] {
+    let dataList: HealthDashboardData[] = [];
+    for (let index = 0; index < days.length; index++) {
+      dataList.push(this.createDashboardData(days[index]));
+    }
+    return dataList;
   }
 
   syncWatchData(source: HealthDashboardData): HealthDashboardData {
@@ -42,7 +80,14 @@ export class HealthMockService {
   addWater(source: HealthDashboardData, amountMl: number): HealthDashboardData {
     let next = this.copyData(source);
     next.waterMl = Math.min(WATER_LIMIT, source.waterMl + amountMl);
-    next.analysisText = this.buildDailyAdvice(next);
+    if (amountMl <= 0) {
+      return next;
+    }
+    if (next.hasWatchData) {
+      next.analysisText = this.buildDailyAdvice(next);
+    } else {
+      next.analysisText = `已记录饮水 ${next.waterMl}ml，目标是逐步接近 ${next.waterGoalMl}ml。`;
+    }
     return next;
   }
 
@@ -85,6 +130,53 @@ export class HealthMockService {
       return 0;
     }
     return remaining;
+  }
+
+  createCardRecord(data: HealthDashboardData): HealthCardRecord {
+    let record = new HealthCardRecord();
+    record.date = data.dateKey;
+    record.steps = data.steps;
+    record.waterMl = data.waterMl;
+    record.remainingCalories = this.getRemainingCalories(data);
+    return record;
+  }
+
+  private createDashboardData(day: HealthCalendarDay): HealthDashboardData {
+    let data = new HealthDashboardData();
+    data.dateKey = day.dateKey;
+    data.dateText = day.dateText;
+    data.waterGoalMl = DEFAULT_WATER_GOAL;
+    data.weightKg = this.getDemoWeight(day.dayOffset);
+    data.weightMinKg = data.weightKg;
+    data.weightMaxKg = data.weightKg;
+    data.baseCalories = this.calculateBaseCalories(data.weightKg);
+
+    if (day.dayOffset < 0) {
+      this.fillHistoryData(data, day);
+      return data;
+    }
+    if (day.isFuture) {
+      data.waterMl = 0;
+      data.updateText = '未记录';
+      data.analysisText = '未来日期暂无健康记录。';
+      return data;
+    }
+
+    data.analysisText = '输入今天吃了什么，点击分析后会给出一条演示建议。';
+    return data;
+  }
+
+  private fillHistoryData(data: HealthDashboardData, day: HealthCalendarDay): void {
+    let age = 0 - day.dayOffset;
+    data.updateText = `${day.dateKey.substring(4, 6)}-${day.dayText} 21:${this.formatTwoDigits(10 + age)}`;
+    data.waterMl = Math.min(DEFAULT_WATER_GOAL, 1180 + age * 160);
+    data.foodCalories = 430 + age * 80;
+    data.proteinG = this.roundOneDecimal(18 + age * 3.4);
+    data.carbsG = this.roundOneDecimal(48 + age * 8.5);
+    data.fatG = this.roundOneDecimal(12 + age * 2.2);
+    data.fiberG = this.roundOneDecimal(4 + age * 0.8);
+    data.sodiumMg = 420 + age * 85;
+    data.analysisText = `${day.dayText} 日演示记录：饮食和饮水已补录，可继续手动调整。`;
   }
 
   private createFoodAnalysis(inputText: string): FoodAnalysisResult {
@@ -330,6 +422,7 @@ export class HealthMockService {
     let data = new HealthDashboardData();
     data.hasWatchData = source.hasWatchData;
     data.syncCount = source.syncCount;
+    data.dateKey = source.dateKey;
     data.dateText = source.dateText;
     data.updateText = source.updateText;
     data.watchSourceText = source.watchSourceText;
@@ -368,8 +461,30 @@ export class HealthMockService {
     return `${date.getFullYear()}年${this.formatTwoDigits(month)}月${this.formatTwoDigits(day)}日`;
   }
 
+  private formatDateKey(date: Date): string {
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+    return `${date.getFullYear()}${this.formatTwoDigits(month)}${this.formatTwoDigits(day)}`;
+  }
+
   private calculateBaseCalories(weightKg: number): number {
     return Math.round(weightKg * BMR_WEIGHT_FACTOR + BMR_WEIGHT_OFFSET);
+  }
+
+  private getDemoWeight(dayOffset: number): number {
+    if (dayOffset <= -4) {
+      return 71.1;
+    }
+    if (dayOffset === -3) {
+      return 71.3;
+    }
+    if (dayOffset === -2) {
+      return 71.2;
+    }
+    if (dayOffset === -1) {
+      return 71.5;
+    }
+    return 71.4;
   }
 
   private formatUpdateTime(date: Date): string {

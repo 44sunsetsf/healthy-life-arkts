@@ -14,7 +14,7 @@
  */
 
 import { CustomDialogCallback } from './CustomDialogView';
-import TaskInfo from '../../viewmodel/TaskInfo';
+import TaskInfo, { taskType } from '../../viewmodel/TaskInfo';
 import { TaskMapById } from '../../model/TaskInitList';
 import { CommonConstants as Const } from '../../common/constants/CommonConstants';
 import { GlobalContext } from '../../common/utils/GlobalContext';
@@ -49,7 +49,12 @@ export struct TaskDetailDialog {
         cancel: () => {
           this.controller.close();
         },
-        isDone: this.currentTask?.isDone || false
+        complete: () => {
+          this.dialogCallBack.completeCallback(this.currentTask);
+          this.controller.close();
+        },
+        isDone: this.currentTask?.isDone || false,
+        isRunTask: this.currentTask?.taskID === taskType.run
       })
     }
     .height($r('app.float.default_451'))
@@ -88,7 +93,9 @@ struct TaskBaseInfo {
 struct TaskClock {
   confirm: Function = () => {};
   cancel: Function = () => {};
+  complete: Function = () => {};
   isDone: boolean = false;
+  isRunTask: boolean = false;
 
   build() {
     Column({ space: Const.DEFAULT_12 }) {
@@ -119,6 +126,23 @@ struct TaskClock {
           GlobalContext.getContext().setObject('taskListChange', true);
           this.confirm();
         })
+
+        if (this.isRunTask) {
+          Button() {
+            Text($r('app.string.complete_all'))
+              .height($r('app.float.default_42'))
+              .fontSize($r('app.float.default_20'))
+              .fontWeight(FontWeight.Normal)
+              .textStyle()
+          }
+          .width($r('app.float.default_220'))
+          .borderRadius($r('app.float.default_24'))
+          .backgroundColor('rgba(255,255,255,0.40)')
+          .onClick(() => {
+            GlobalContext.getContext().setObject('taskListChange', true);
+            this.complete();
+          })
+        }
       }
 
       Text($r('app.string.got_it'))

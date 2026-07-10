@@ -21,83 +21,132 @@ struct ProgressCard {
   @LocalStorageProp('numerator') numerator: number = 0;
   @LocalStorageProp('denominator') denominator: number = 0;
   @LocalStorageProp('percent') percent: string = '0';
+  @LocalStorageProp('healthSteps') healthSteps: string = '0';
+  @LocalStorageProp('healthWater') healthWater: string = '900';
+  @LocalStorageProp('healthCalories') healthCalories: string = '1449';
 
+  /*
+   * The action type.
+   */
   readonly ACTION_TYPE: string = 'router';
+
+  /*
+   * The ability name.
+   */
   readonly ABILITY_NAME: string = 'EntryAbility';
+
+  /*
+   * The with percentage setting.
+   */
   readonly FULL_WIDTH_PERCENT: string = '100%';
+
+  /*
+   * The height percentage setting.
+   */
   readonly FULL_HEIGHT_PERCENT: string = '100%';
-  readonly PROGRESS_TOTAL: number = 100;
-  readonly TEXT_SLIGHTLY_BOLD: number = 500;
+
+  /*
+   * The progress layout height percentage setting.
+   */
+  readonly PROGRESS_LAYOUT_HEIGHT: string = '80%';
+
+  /*
+   * The finish results layout percentage setting.
+   */
+  readonly RESULTS_LAYOUT_HEIGHT: string = '20%';
+
+  /*
+   * The percent sign.
+   */
   readonly PERCENTAGE: string = '%';
+
+  /*
+   * The slashes splicing.
+   */
   readonly SLASHES: string = '/';
 
-  getProgressColor(): string {
-    let p = Number.parseInt(this.percent);
-    if (p >= 100) return '#4CAF50';
-    if (p >= 60) return '#409EFF';
-    if (p >= 30) return '#E6A23C';
-    return '#F56C6C';
-  }
+  /**
+   * The progress total to 100.
+   */
+  readonly PROGRESS_TOTAL: number = 100;
 
-  getStatusText(): string {
-    let p = Number.parseInt(this.percent);
-    if (p >= 100) return '已全部完成';
-    if (p >= 60) return '进展良好';
-    if (p >= 30) return '继续加油';
-    return '刚刚开始';
-  }
+  /**
+   * The text slightly bold.
+   */
+  readonly TEXT_SLIGHTLY_BOLD: number = 500;
 
   build() {
     Column() {
-      Text('今日进度')
-        .fontSize(12)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#333333')
-        .width(this.FULL_WIDTH_PERCENT)
-        .padding({ left: 12, top: 10, bottom: 4 })
-
-      Stack() {
-        Progress({ value: 0, total: this.PROGRESS_TOTAL, type: ProgressType.Ring })
-          .value(Number.parseInt(this.percent))
-          .width(80)
-          .height(80)
-          .style({ strokeWidth: 8 })
-          .color(this.getProgressColor())
-        Column() {
-          Text(this.percent)
-            .fontSize(20)
-            .fontColor('#333333')
-            .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-          Text(this.PERCENTAGE)
-            .fontSize(10)
-            .fontColor('#999999')
-            .margin({ top: -2 })
-        }
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-      }
-      .layoutWeight(1)
-
       Row() {
-        Text(this.getStatusText())
-          .fontSize(10)
-          .fontColor(this.getProgressColor())
-          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-        Blank()
-        Text(this.numerator.toString())
+        Text('今日健康')
           .fontSize(14)
-          .fontColor('#333333')
-          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-        Text(this.SLASHES + this.denominator)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#182431')
+          .layoutWeight(1)
+        Text(`${this.numerator}${this.SLASHES}${this.denominator}`)
           .fontSize(12)
-          .fontColor('#999999')
-          .fontWeight(FontWeight.Normal)
+          .fontColor('#72787E')
       }
       .width(this.FULL_WIDTH_PERCENT)
-      .padding({ left: 12, right: 12, bottom: 10 })
+      .alignItems(VerticalAlign.Center)
+
+      Row() {
+        Stack() {
+          Progress({ value: 0, total: this.PROGRESS_TOTAL, type: ProgressType.Ring })
+            .value(Number.parseInt(this.percent))
+            .width(68)
+            .height(68)
+            .color('#30C6B0')
+            .backgroundColor('#E8F8F5')
+            .style({ strokeWidth: 8 })
+          Column() {
+            Row() {
+              Text(this.percent)
+                .fontSize(18)
+                .fontColor('#182431')
+                .fontWeight(FontWeight.Bold)
+              Text(this.PERCENTAGE)
+                .fontSize(10)
+                .fontColor('#182431')
+                .fontWeight(this.TEXT_SLIGHTLY_BOLD)
+                .margin({ top: 6 })
+            }
+            .justifyContent(FlexAlign.Center)
+            Text('任务')
+              .fontSize(10)
+              .fontColor('#8A94A3')
+          }
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width(74)
+        .height(74)
+
+        Column({ space: 4 }) {
+          Text(`${this.numerator}${this.SLASHES}${this.denominator}`)
+            .fontSize(20)
+            .fontColor('#182431')
+            .fontWeight(FontWeight.Bold)
+          Text('已完成任务')
+            .fontSize(10)
+            .fontColor('#8A94A3')
+        }
+        .layoutWeight(1)
+        .margin({ left: 10 })
+      }
+      .layoutWeight(1)
+      .width(this.FULL_WIDTH_PERCENT)
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: 4 }) {
+        this.HealthMetric('步数', this.formatHealthValue(this.healthSteps, '步'))
+        this.HealthMetric('饮水', this.formatHealthValue(this.healthWater, 'ml'))
+        this.HealthMetric('还能吃', this.formatHealthValue(this.healthCalories, '千卡'))
+      }
+      .width(this.FULL_WIDTH_PERCENT)
+      .margin({ top: 4 })
     }
-    .backgroundColor('#F5F7FA')
-    .borderRadius(16)
+    .padding(12)
+    .backgroundColor('#F7FBFA')
     .width(this.FULL_WIDTH_PERCENT)
     .height(this.FULL_HEIGHT_PERCENT)
     .onClick(() => {
@@ -106,5 +155,30 @@ struct ProgressCard {
         'abilityName': this.ABILITY_NAME
       });
     })
+  }
+
+  formatHealthValue(value: string, unit: string): string {
+    if (value === '--') {
+      return '--';
+    }
+    return `${value}${unit}`;
+  }
+
+  @Builder HealthMetric(label: string, valueText: string) {
+    Column({ space: 2 }) {
+      Text(label)
+        .fontSize(9)
+        .fontColor('#8A94A3')
+      Text(valueText)
+        .fontSize(10)
+        .fontColor('#182431')
+        .fontWeight(FontWeight.Bold)
+        .maxLines(1)
+    }
+    .padding({ top: 4, bottom: 4, left: 2, right: 2 })
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#ECF7F5')
+    .borderRadius(6)
   }
 }

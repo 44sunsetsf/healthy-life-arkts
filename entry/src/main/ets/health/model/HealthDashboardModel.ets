@@ -1,4 +1,5 @@
 export class HealthDashboardData {
+  dateKey: string = '';
   hasWatchData: boolean = false;
   syncCount: number = 0;
   dateText: string = '';
@@ -32,6 +33,16 @@ export class HealthDashboardData {
   analysisText: string = '输入今天吃了什么，点击分析后会给出一条演示建议。';
 }
 
+export class HealthCalendarDay {
+  dateKey: string = '';
+  dateText: string = '';
+  weekText: string = '';
+  dayText: string = '';
+  dayOffset: number = 0;
+  isToday: boolean = false;
+  isFuture: boolean = false;
+}
+
 export class FoodAnalysisResult {
   calories: number = 0;
   proteinG: number = 0;
@@ -41,4 +52,11 @@ export class FoodAnalysisResult {
   sodiumMg: number = 0;
   matchedFoodText: string = '';
   advice: string = '';
+}
+
+export class HealthCardRecord {
+  date: string = '';
+  steps: number = 0;
+  waterMl: number = 0;
+  remainingCalories: number = 0;
 }

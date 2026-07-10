@@ -27,24 +27,91 @@ struct AgencyCard {
     smile: $r('app.media.ic_task_smile'),
     clean: $r('app.media.ic_task_brush'),
     sleep: $r('app.media.ic_task_night'),
-    run: $r('app.media.ic_task_morning')
+    run: $r('app.media.ic_task_run')
   } as iconInfo;
-
+  /*
+   * The action type.
+   */
   readonly ACTION_TYPE: string = 'router';
+
+  /*
+   * The ability name.
+   */
   readonly ABILITY_NAME: string = 'EntryAbility';
+
+  /*
+   * The with percentage setting.
+   */
   readonly FULL_WIDTH_PERCENT: string = '100%';
+
+  /*
+   * The height percentage setting.
+   */
   readonly FULL_HEIGHT_PERCENT: string = '100%';
+
+  /*
+   * The empty image width percentage setting.
+   */
   readonly EMPTY_IMAGE_WIDTH: string = '31%';
+
+  /*
+   * The agency component height percentage setting.
+   */
+  readonly AGENCY_COMPONENT_HEIGHT: string = '31%';
+
+  /*
+   * The empty image height percentage setting.
+   */
   readonly EMPTY_IMAGE_HEIGHT: string = '51%';
+
+  /*
+   * The empty data text component margin top.
+   */
   readonly TEXT_MARGIN_TOP: string = '0.5%';
+
+  /*
+   * The cross bar symbol stitching
+   */
   readonly CROSS_BAR_SYMBOL: string = '--';
+
+  /*
+   * The slashes splicing.
+   */
   readonly SLASHES: string = '/';
+
+  /*
+   * The target value splicing
+   */
   readonly TARGET_VALUE_SPLICING: string = this.CROSS_BAR_SYMBOL + this.SLASHES;
-  readonly LIST_SPACE: number = 8;
+
+  /**
+   * The list component space.
+   */
+  readonly LIST_SPACE: number = 5;
+
+  /**
+   * The list component two lanes.
+   */
   readonly LIST_TWO_LANES: number = 2;
+
+  /**
+   * The empty data text opacity.
+   */
   readonly TEXT_OPACITY: number = 0.4;
+
+  /**
+   * The target text opacity.
+   */
   readonly TARGET_TEXT_OPACITY: number = 0.6;
+
+  /**
+   * The target text weight.
+   */
   readonly TARGET_TEXT_WEIGHT: number = 1;
+
+  /**
+   * The text slightly bold.
+   */
   readonly TEXT_SLIGHTLY_BOLD: number = 500;
 
   getIconByCardTaskType(key?: string): Resource {
@@ -69,7 +136,7 @@ struct AgencyCard {
         result = $r('app.media.ic_task_night');
         break;
       case 'run':
-        result = $r('app.media.ic_task_morning');
+        result = $r('app.media.ic_task_run');
         break;
       default:
         break;
@@ -77,55 +144,34 @@ struct AgencyCard {
     return result;
   }
 
-  getTaskBgColor(taskItem: AgencyCardInfo): string {
-    if (taskItem.isDone) return 'rgba(76,175,80,0.12)';
-    return 'rgba(255,255,255,0.90)';
-  }
-
-  getTaskIconBgColor(taskItem: AgencyCardInfo): string {
-    if (taskItem.isDone) return 'rgba(76,175,80,0.20)';
-    return 'rgba(64,158,255,0.12)';
-  }
-
   build() {
     Column() {
       if (this.showWidget) {
-        Column() {
-          Text('今日任务')
-            .fontSize(14)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#333333')
-            .width(this.FULL_WIDTH_PERCENT)
-            .padding({ left: 12, top: 10, bottom: 4 })
-        }
-        .width(this.FULL_WIDTH_PERCENT)
-
         List({ space: this.LIST_SPACE }) {
           ForEach(this.taskList, (taskItem: AgencyCardInfo) => {
             ListItem() {
               this.AgencyComponent(taskItem)
             }
-            .borderRadius(12)
-            .backgroundColor(this.getTaskBgColor(taskItem))
+            .margin({ right: $r("app.float.agency_item_margin") })
+            .borderRadius($r("app.float.agency_item_radius"))
+            .backgroundColor(taskItem.isDone ? '#E8F8F5' : '#FFFFFF')
+            .border({ width: taskItem.isDone ? 1 : 0, color: '#B7EBD9' })
           }, (taskItem: AgencyCardInfo) => JSON.stringify(taskItem))
         }
         .padding({
-          left: 10,
-          top: 4,
-          right: 10,
-          bottom: 10
+          left: $r('app.float.agency_padding_left'),
+          top: $r('app.float.agency_padding_top'),
+          right: $r('app.float.agency_padding_right'),
+          bottom: $r('app.float.agency_padding_bottom')
         })
         .lanes(this.LIST_TWO_LANES)
+        .backgroundColor($r("app.color.list_background_color"))
         .width(this.FULL_WIDTH_PERCENT)
-        .layoutWeight(1)
+        .height(this.FULL_HEIGHT_PERCENT)
       } else {
         this.AgencyNoData()
       }
     }
-    .width(this.FULL_WIDTH_PERCENT)
-    .height(this.FULL_HEIGHT_PERCENT)
-    .backgroundColor('#F5F7FA')
-    .borderRadius(16)
   }
 
   @Builder AgencyNoData() {
@@ -134,18 +180,17 @@ struct AgencyCard {
         .width(this.EMPTY_IMAGE_WIDTH)
         .height(this.EMPTY_IMAGE_HEIGHT)
         .objectFit(ImageFit.Contain)
-        .opacity(0.6)
-      Text('暂无任务，点击添加')
-        .fontSize(12)
-        .fontColor('#999999')
+      Text($r('app.string.agencyNoTask'))
+        .fontSize($r('app.float.empty_data_size'))
+        .fontColor(Color.White)
         .fontWeight(FontWeight.Normal)
-        .margin({ top: 6 })
+        .opacity(this.TEXT_OPACITY)
+        .margin({ top: this.TEXT_MARGIN_TOP })
     }
     .justifyContent(FlexAlign.Center)
     .width(this.FULL_WIDTH_PERCENT)
     .height(this.FULL_HEIGHT_PERCENT)
-    .backgroundColor('#F5F7FA')
-    .borderRadius(16)
+    .backgroundColor($r("app.color.no_data_background"))
     .onClick(() => {
       this.jumpToAbility();
     })
@@ -153,58 +198,74 @@ struct AgencyCard {
 
   @Builder AgencyComponent(taskItem: AgencyCardInfo) {
     Row() {
-      Stack() {
-        Circle()
-          .width(28)
-          .height(28)
-          .fill(this.getTaskIconBgColor(taskItem))
-        Image(this.getIconByCardTaskType(taskItem.taskType))
-          .width(16)
-          .height(16)
-          .objectFit(ImageFit.Contain)
-      }
-      .margin({ right: 6 })
-
-      if (taskItem.isDone) {
-        Text('已完成')
-          .fontSize(10)
-          .fontColor('#4CAF50')
-          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-          .layoutWeight(this.TARGET_TEXT_WEIGHT)
-          .textAlign(TextAlign.End)
-      } else if (taskItem.dateType) {
-        Text(this.TARGET_VALUE_SPLICING + taskItem.targetValue)
-          .fontSize(10)
-          .fontColor('#666666')
-          .opacity(this.TARGET_TEXT_OPACITY)
-          .fontWeight(FontWeight.Normal)
-          .layoutWeight(this.TARGET_TEXT_WEIGHT)
-          .textAlign(TextAlign.End)
+      Image(this.getIconByCardTaskType(taskItem.taskType))
+        .width($r('app.float.agency_image_size'))
+        .height($r('app.float.agency_image_size'))
+        .objectFit(ImageFit.Contain)
+        .opacity(taskItem.isDone ? 0.72 : 1)
+      if (taskItem.dateType) {
+        Row({ space: 6 }) {
+          Text(taskItem.isDone ? '已完成' : this.TARGET_VALUE_SPLICING + taskItem.targetValue)
+            .fontSize($r("app.float.text_common_size"))
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#182431')
+            .opacity(taskItem.isDone ? 1 : this.TARGET_TEXT_OPACITY)
+            .fontWeight(taskItem.isDone ? this.TEXT_SLIGHTLY_BOLD : FontWeight.Normal)
+            .layoutWeight(this.TARGET_TEXT_WEIGHT)
+            .textAlign(TextAlign.End)
+          if (taskItem.isDone) {
+            this.DoneMark()
+          }
+        }
+        .layoutWeight(this.TARGET_TEXT_WEIGHT)
+        .alignItems(VerticalAlign.Center)
       } else {
         Row() {
           Text(taskItem.finValueIsNull ? this.CROSS_BAR_SYMBOL : taskItem.finValue)
-            .fontSize(taskItem.finValueIsNull ? 10 : 12)
+            .fontSize(taskItem.finValueIsNull ?
+              $r("app.float.text_common_size") :
+              $r('app.float.agency_text_bold'))
             .fontWeight(taskItem.finValueIsNull ? FontWeight.Normal : this.TEXT_SLIGHTLY_BOLD)
-            .fontColor(taskItem.finValueIsNull ? '#999999' : '#333333')
+            .fontColor(taskItem.finValueIsNull ?
+              '#99182431' :
+              (taskItem.isDone ? '#30C6B0' : '#182431'))
           Text(this.SLASHES + taskItem.targetValue)
-            .fontSize(10)
+            .fontSize($r("app.float.text_common_size"))
             .fontWeight(FontWeight.Normal)
-            .fontColor('#999999')
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#99182431')
           Text(taskItem.unit)
-            .fontSize(9)
+            .fontSize($r("app.float.text_common_size"))
             .fontWeight(FontWeight.Normal)
-            .fontColor('#999999')
+            .fontColor(taskItem.isDone ? '#30C6B0' : '#99182431')
+          if (taskItem.isDone) {
+            this.DoneMark()
+          }
         }
         .layoutWeight(this.TARGET_TEXT_WEIGHT)
         .justifyContent(FlexAlign.End)
+        .alignItems(VerticalAlign.Center)
       }
     }
-    .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+    .padding({
+      left: $r('app.float.agency_row_padding'),
+      right: $r('app.float.agency_row_padding')
+    })
     .width(this.FULL_WIDTH_PERCENT)
-    .height(40)
+    .height(this.AGENCY_COMPONENT_HEIGHT)
     .onClick(() => {
       this.jumpToAbility();
     })
+  }
+
+  @Builder DoneMark() {
+    Text('✓')
+      .fontSize(12)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#FFFFFF')
+      .width(20)
+      .height(20)
+      .textAlign(TextAlign.Center)
+      .backgroundColor('#30C6B0')
+      .borderRadius(10)
   }
 
   jumpToAbility() {
@@ -222,7 +283,7 @@ class AgencyCardInfo {
   unit?: string;
   dateType?: boolean;
   hasTargetValue?: boolean;
-  finValueIsNull?: boolean;
+  finValueIsNull?:boolean;
   isDone?: boolean;
 }
 

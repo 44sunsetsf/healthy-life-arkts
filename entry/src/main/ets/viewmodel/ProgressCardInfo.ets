@@ -26,17 +26,32 @@ export default class ProgressCardInfo {
   /**
    * Target completion quantity
    */
-  numerator?: number;
+  numerator: number = 0;
 
   /**
    * Total Targets
    */
-  denominator?: number;
+  denominator: number = 0;
 
   /**
    * Completion progress
    */
-  percent?: string;
+  percent: string = '0';
+
+  /**
+   * Mock health step count
+   */
+  healthSteps: string = '0';
+
+  /**
+   * Mock water intake
+   */
+  healthWater: string = '900';
+
+  /**
+   * Mock remaining calories
+   */
+  healthCalories: string = '1449';
 
   /**
    * Whether to display widgets
