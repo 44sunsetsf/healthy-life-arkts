@@ -32,11 +32,18 @@ struct RankPage {
     return '#FFFFFF';
   }
 
+  getRankBorderWidth(index: number): number {
+    if (index === 0) return 2.5;
+    if (index === 1) return 2.5;
+    if (index === 2) return 2.5;
+    return 1;
+  }
+
   getRankBorderColor(index: number, isCurrentUser: boolean): string {
-    if (isCurrentUser) return 'rgba(64,158,255,0.5)';
     if (index === 0) return 'rgba(255,215,0,0.6)';
     if (index === 1) return 'rgba(192,192,192,0.6)';
     if (index === 2) return 'rgba(205,127,50,0.6)';
+    if (isCurrentUser) return 'rgba(64,158,255,0.5)';
     return 'rgba(0,0,0,0.05)';
   }
 
@@ -119,7 +126,7 @@ struct RankPage {
                 .backgroundColor(this.getRankBgColor(index as number, item.username === this.currentUsername))
                 .borderRadius(12)
                 .border({
-                  width: 1,
+                  width: this.getRankBorderWidth(index as number),
                   color: this.getRankBorderColor(index as number, item.username === this.currentUsername),
                   radius: 12
                 })
