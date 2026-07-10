@@ -367,7 +367,45 @@ export class HomeStore {
     } as AchievementInfo;
   }
 
-  updateTask(task: TaskInfo): Promise<TaskInfo> {
+  public async taskCompleteAll(taskInfo: TaskInfo) {
+    let taskItem = await this.updateTask(taskInfo, true);
+    let dateStr = this.selectedDayInfo?.dateStr;
+    if (!taskItem) {
+      return {
+        achievementLevel: 0,
+        showAchievement: false
+      } as AchievementInfo;
+    }
+
+    this.selectedDayInfo.taskList = this.selectedDayInfo.taskList.map((item) => {
+      return item.taskID === taskItem?.taskID ? taskItem : item;
+    });
+    let achievementLevel: number = 0;
+    let expGained: number = 0;
+    let oldLevel: number = 0;
+    let newLevel: number = 0;
+    if (taskItem.isDone) {
+      let expResult = await this.addExperience(HomeStore.EXP_PER_CLOCK);
+      expGained = expResult.expGained;
+      oldLevel = expResult.oldLevel;
+      newLevel = expResult.newLevel;
+      let dayInfo = await this.updateDayInfo();
+      if (dayInfo && dayInfo?.finTaskNum === dayInfo?.targetTaskNum) {
+        achievementLevel = await this.updateAchievement(this.selectedDayInfo.dayInfo);
+      }
+    }
+    this.dateArr = this.dateArr.map((item: WeekDateModel) => dateStr === item.dateStr ? this.selectedDayInfo : item);
+    return {
+      achievementLevel: achievementLevel,
+      showAchievement: ACHIEVEMENT_LEVEL_LIST.includes(achievementLevel),
+      expGained: expGained,
+      oldLevel: oldLevel,
+      newLevel: newLevel,
+      isLevelUp: newLevel > oldLevel
+    } as AchievementInfo;
+  }
+
+  updateTask(task: TaskInfo, completeAll: boolean = false): Promise<TaskInfo> {
     return new Promise((resolve, reject) => {
       let taskID = task.taskID;
       let targetValue = task.targetValue;
@@ -376,7 +414,7 @@ export class HomeStore {
         task.endTime, task.frequency, task.isDone, finValue, task.isOpen);
       let step = TaskMapById[taskID - 1].step;
       let hasExceed = updateTask.isDone;
-      if (step === 0) {
+      if (completeAll || step === 0) {
         updateTask.isDone = true;
         updateTask.finValue = targetValue;
       } else {

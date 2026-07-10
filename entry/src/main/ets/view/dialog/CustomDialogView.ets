@@ -23,6 +23,7 @@ import Logger from '../../common/utils/Logger';
 export class CustomDialogCallback {
   confirmCallback: Function = () => {};
   cancelCallback: Function = () => {};
+  completeCallback: Function = () => {};
 }
 
 @Component
