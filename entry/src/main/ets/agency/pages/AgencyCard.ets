@@ -29,89 +29,22 @@ struct AgencyCard {
     sleep: $r('app.media.ic_task_night'),
     run: $r('app.media.ic_task_morning')
   } as iconInfo;
-  /*
-   * The action type.
-   */
+
   readonly ACTION_TYPE: string = 'router';
-
-  /*
-   * The ability name.
-   */
   readonly ABILITY_NAME: string = 'EntryAbility';
-
-  /*
-   * The with percentage setting.
-   */
   readonly FULL_WIDTH_PERCENT: string = '100%';
-
-  /*
-   * The height percentage setting.
-   */
   readonly FULL_HEIGHT_PERCENT: string = '100%';
-
-  /*
-   * The empty image width percentage setting.
-   */
   readonly EMPTY_IMAGE_WIDTH: string = '31%';
-
-  /*
-   * The agency component height percentage setting.
-   */
-  readonly AGENCY_COMPONENT_HEIGHT: string = '31%';
-
-  /*
-   * The empty image height percentage setting.
-   */
   readonly EMPTY_IMAGE_HEIGHT: string = '51%';
-
-  /*
-   * The empty data text component margin top.
-   */
   readonly TEXT_MARGIN_TOP: string = '0.5%';
-
-  /*
-   * The cross bar symbol stitching
-   */
   readonly CROSS_BAR_SYMBOL: string = '--';
-
-  /*
-   * The slashes splicing.
-   */
   readonly SLASHES: string = '/';
-
-  /*
-   * The target value splicing
-   */
   readonly TARGET_VALUE_SPLICING: string = this.CROSS_BAR_SYMBOL + this.SLASHES;
-
-  /**
-   * The list component space.
-   */
-  readonly LIST_SPACE: number = 5;
-
-  /**
-   * The list component two lanes.
-   */
+  readonly LIST_SPACE: number = 8;
   readonly LIST_TWO_LANES: number = 2;
-
-  /**
-   * The empty data text opacity.
-   */
   readonly TEXT_OPACITY: number = 0.4;
-
-  /**
-   * The target text opacity.
-   */
   readonly TARGET_TEXT_OPACITY: number = 0.6;
-
-  /**
-   * The target text weight.
-   */
   readonly TARGET_TEXT_WEIGHT: number = 1;
-
-  /**
-   * The text slightly bold.
-   */
   readonly TEXT_SLIGHTLY_BOLD: number = 500;
 
   getIconByCardTaskType(key?: string): Resource {
@@ -144,33 +77,55 @@ struct AgencyCard {
     return result;
   }
 
+  getTaskBgColor(taskItem: AgencyCardInfo): string {
+    if (taskItem.isDone) return 'rgba(76,175,80,0.12)';
+    return 'rgba(255,255,255,0.90)';
+  }
+
+  getTaskIconBgColor(taskItem: AgencyCardInfo): string {
+    if (taskItem.isDone) return 'rgba(76,175,80,0.20)';
+    return 'rgba(64,158,255,0.12)';
+  }
+
   build() {
     Column() {
       if (this.showWidget) {
+        Column() {
+          Text('今日任务')
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333333')
+            .width(this.FULL_WIDTH_PERCENT)
+            .padding({ left: 12, top: 10, bottom: 4 })
+        }
+        .width(this.FULL_WIDTH_PERCENT)
+
         List({ space: this.LIST_SPACE }) {
           ForEach(this.taskList, (taskItem: AgencyCardInfo) => {
             ListItem() {
               this.AgencyComponent(taskItem)
             }
-            .margin({ right: $r("app.float.agency_item_margin") })
-            .borderRadius($r("app.float.agency_item_radius"))
-            .backgroundColor(Color.White)
+            .borderRadius(12)
+            .backgroundColor(this.getTaskBgColor(taskItem))
           }, (taskItem: AgencyCardInfo) => JSON.stringify(taskItem))
         }
         .padding({
-          left: $r('app.float.agency_padding_left'),
-          top: $r('app.float.agency_padding_top'),
-          right: $r('app.float.agency_padding_right'),
-          bottom: $r('app.float.agency_padding_bottom')
+          left: 10,
+          top: 4,
+          right: 10,
+          bottom: 10
         })
         .lanes(this.LIST_TWO_LANES)
-        .backgroundColor($r("app.color.list_background_color"))
         .width(this.FULL_WIDTH_PERCENT)
-        .height(this.FULL_HEIGHT_PERCENT)
+        .layoutWeight(1)
       } else {
         this.AgencyNoData()
       }
     }
+    .width(this.FULL_WIDTH_PERCENT)
+    .height(this.FULL_HEIGHT_PERCENT)
+    .backgroundColor('#F5F7FA')
+    .borderRadius(16)
   }
 
   @Builder AgencyNoData() {
@@ -179,17 +134,18 @@ struct AgencyCard {
         .width(this.EMPTY_IMAGE_WIDTH)
         .height(this.EMPTY_IMAGE_HEIGHT)
         .objectFit(ImageFit.Contain)
-      Text($r('app.string.agencyNoTask'))
-        .fontSize($r('app.float.empty_data_size'))
-        .fontColor(Color.White)
+        .opacity(0.6)
+      Text('暂无任务，点击添加')
+        .fontSize(12)
+        .fontColor('#999999')
         .fontWeight(FontWeight.Normal)
-        .opacity(this.TEXT_OPACITY)
-        .margin({ top: this.TEXT_MARGIN_TOP })
+        .margin({ top: 6 })
     }
     .justifyContent(FlexAlign.Center)
     .width(this.FULL_WIDTH_PERCENT)
     .height(this.FULL_HEIGHT_PERCENT)
-    .backgroundColor($r("app.color.no_data_background"))
+    .backgroundColor('#F5F7FA')
+    .borderRadius(16)
     .onClick(() => {
       this.jumpToAbility();
     })
@@ -197,14 +153,29 @@ struct AgencyCard {
 
   @Builder AgencyComponent(taskItem: AgencyCardInfo) {
     Row() {
-      Image(this.getIconByCardTaskType(taskItem.taskType))
-        .width($r('app.float.agency_image_size'))
-        .height($r('app.float.agency_image_size'))
-        .objectFit(ImageFit.Contain)
-      if (taskItem.dateType) {
-        Text(taskItem.isDone ? taskItem.targetValue : this.TARGET_VALUE_SPLICING + taskItem.targetValue)
-          .fontSize($r("app.float.text_common_size"))
-          .fontColor($r("app.color.text_common_color"))
+      Stack() {
+        Circle()
+          .width(28)
+          .height(28)
+          .fill(this.getTaskIconBgColor(taskItem))
+        Image(this.getIconByCardTaskType(taskItem.taskType))
+          .width(16)
+          .height(16)
+          .objectFit(ImageFit.Contain)
+      }
+      .margin({ right: 6 })
+
+      if (taskItem.isDone) {
+        Text('已完成')
+          .fontSize(10)
+          .fontColor('#4CAF50')
+          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
+          .layoutWeight(this.TARGET_TEXT_WEIGHT)
+          .textAlign(TextAlign.End)
+      } else if (taskItem.dateType) {
+        Text(this.TARGET_VALUE_SPLICING + taskItem.targetValue)
+          .fontSize(10)
+          .fontColor('#666666')
           .opacity(this.TARGET_TEXT_OPACITY)
           .fontWeight(FontWeight.Normal)
           .layoutWeight(this.TARGET_TEXT_WEIGHT)
@@ -212,32 +183,25 @@ struct AgencyCard {
       } else {
         Row() {
           Text(taskItem.finValueIsNull ? this.CROSS_BAR_SYMBOL : taskItem.finValue)
-            .fontSize(taskItem.finValueIsNull ?
-              $r("app.float.text_common_size") :
-              $r('app.float.agency_text_bold'))
+            .fontSize(taskItem.finValueIsNull ? 10 : 12)
             .fontWeight(taskItem.finValueIsNull ? FontWeight.Normal : this.TEXT_SLIGHTLY_BOLD)
-            .fontColor(taskItem.finValueIsNull ?
-              $r('app.color.hex_common_color') :
-              $r('app.color.text_common_color'))
+            .fontColor(taskItem.finValueIsNull ? '#999999' : '#333333')
           Text(this.SLASHES + taskItem.targetValue)
-            .fontSize($r("app.float.text_common_size"))
+            .fontSize(10)
             .fontWeight(FontWeight.Normal)
-            .fontColor($r('app.color.hex_common_color'))
+            .fontColor('#999999')
           Text(taskItem.unit)
-            .fontSize($r("app.float.text_common_size"))
+            .fontSize(9)
             .fontWeight(FontWeight.Normal)
-            .fontColor($r('app.color.hex_common_color'))
+            .fontColor('#999999')
         }
         .layoutWeight(this.TARGET_TEXT_WEIGHT)
         .justifyContent(FlexAlign.End)
       }
     }
-    .padding({
-      left: $r('app.float.agency_row_padding'),
-      right: $r('app.float.agency_row_padding')
-    })
+    .padding({ left: 8, right: 8, top: 6, bottom: 6 })
     .width(this.FULL_WIDTH_PERCENT)
-    .height(this.AGENCY_COMPONENT_HEIGHT)
+    .height(40)
     .onClick(() => {
       this.jumpToAbility();
     })
@@ -258,7 +222,7 @@ class AgencyCardInfo {
   unit?: string;
   dateType?: boolean;
   hasTargetValue?: boolean;
-  finValueIsNull?:boolean;
+  finValueIsNull?: boolean;
   isDone?: boolean;
 }
 

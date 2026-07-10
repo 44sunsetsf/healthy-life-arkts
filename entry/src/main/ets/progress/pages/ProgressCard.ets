@@ -22,95 +22,82 @@ struct ProgressCard {
   @LocalStorageProp('denominator') denominator: number = 0;
   @LocalStorageProp('percent') percent: string = '0';
 
-  /*
-   * The action type.
-   */
   readonly ACTION_TYPE: string = 'router';
-
-  /*
-   * The ability name.
-   */
   readonly ABILITY_NAME: string = 'EntryAbility';
-
-  /*
-   * The with percentage setting.
-   */
   readonly FULL_WIDTH_PERCENT: string = '100%';
-
-  /*
-   * The height percentage setting.
-   */
   readonly FULL_HEIGHT_PERCENT: string = '100%';
-
-  /*
-   * The progress layout height percentage setting.
-   */
-  readonly PROGRESS_LAYOUT_HEIGHT: string = '80%';
-
-  /*
-   * The finish results layout percentage setting.
-   */
-  readonly RESULTS_LAYOUT_HEIGHT: string = '20%';
-
-  /*
-   * The percent sign.
-   */
+  readonly PROGRESS_TOTAL: number = 100;
+  readonly TEXT_SLIGHTLY_BOLD: number = 500;
   readonly PERCENTAGE: string = '%';
-
-  /*
-   * The slashes splicing.
-   */
   readonly SLASHES: string = '/';
 
-  /**
-   * The progress total to 100.
-   */
-  readonly PROGRESS_TOTAL: number = 100;
+  getProgressColor(): string {
+    let p = Number.parseInt(this.percent);
+    if (p >= 100) return '#4CAF50';
+    if (p >= 60) return '#409EFF';
+    if (p >= 30) return '#E6A23C';
+    return '#F56C6C';
+  }
 
-  /**
-   * The text slightly bold.
-   */
-  readonly TEXT_SLIGHTLY_BOLD: number = 500;
+  getStatusText(): string {
+    let p = Number.parseInt(this.percent);
+    if (p >= 100) return '已全部完成';
+    if (p >= 60) return '进展良好';
+    if (p >= 30) return '继续加油';
+    return '刚刚开始';
+  }
 
   build() {
     Column() {
+      Text('今日进度')
+        .fontSize(12)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#333333')
+        .width(this.FULL_WIDTH_PERCENT)
+        .padding({ left: 12, top: 10, bottom: 4 })
+
       Stack() {
         Progress({ value: 0, total: this.PROGRESS_TOTAL, type: ProgressType.Ring })
           .value(Number.parseInt(this.percent))
-          .width($r('app.float.progress_component_size'))
-          .height($r('app.float.progress_component_size'))
-          .backgroundColor($r('app.color.progress_background_color'))
-          .style({ strokeWidth: $r('app.float.progress_stroke_width') })
-        Row() {
+          .width(80)
+          .height(80)
+          .style({ strokeWidth: 8 })
+          .color(this.getProgressColor())
+        Column() {
           Text(this.percent)
-            .fontSize($r('app.float.percent_text_size'))
-            .fontColor(Color.Black)
-            .fontWeight(FontWeight.Normal)
-          Text(this.PERCENTAGE)
-            .fontSize($r('app.float.percent_sign_size'))
-            .fontColor(Color.Black)
+            .fontSize(20)
+            .fontColor('#333333')
             .fontWeight(this.TEXT_SLIGHTLY_BOLD)
-            .margin({ top: $r('app.float.percent_sign_margin') })
+          Text(this.PERCENTAGE)
+            .fontSize(10)
+            .fontColor('#999999')
+            .margin({ top: -2 })
         }
         .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
       }
-      .height(this.PROGRESS_LAYOUT_HEIGHT)
+      .layoutWeight(1)
 
       Row() {
+        Text(this.getStatusText())
+          .fontSize(10)
+          .fontColor(this.getProgressColor())
+          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
+        Blank()
         Text(this.numerator.toString())
-          .fontColor($r('app.color.numerator_text_color'))
-          .fontSize($r('app.float.numerator_text_size'))
-          .lineHeight($r('app.float.numerator_line_height'))
-          .fontWeight(FontWeight.Normal)
+          .fontSize(14)
+          .fontColor('#333333')
+          .fontWeight(this.TEXT_SLIGHTLY_BOLD)
         Text(this.SLASHES + this.denominator)
-          .fontColor($r('app.color.denominator_text_color'))
-          .fontSize($r('app.float.denominator_text_size'))
-          .lineHeight($r('app.float.denominator_line_height'))
+          .fontSize(12)
+          .fontColor('#999999')
           .fontWeight(FontWeight.Normal)
       }
-      .height(this.RESULTS_LAYOUT_HEIGHT)
+      .width(this.FULL_WIDTH_PERCENT)
+      .padding({ left: 12, right: 12, bottom: 10 })
     }
-    .backgroundColor($r("app.color.progress_column_color"))
+    .backgroundColor('#F5F7FA')
+    .borderRadius(16)
     .width(this.FULL_WIDTH_PERCENT)
     .height(this.FULL_HEIGHT_PERCENT)
     .onClick(() => {
